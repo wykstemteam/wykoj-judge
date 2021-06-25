@@ -3,14 +3,14 @@ import subprocess
 
 from languages import Languages
 from submission import Submission
-from threads import threads
+from threads_manager import threads_manager
 from verdict import Verdict
 
 
 def judge(submission: Submission, thread_id: int) -> Verdict:
-    threads.add_thread(thread_id)
+    threads_manager.add_thread(thread_id)
     verdict = _judge_impl(submission, thread_id)
-    threads.remove_thread(thread_id)
+    threads_manager.remove_thread(thread_id)
     return verdict
 
 

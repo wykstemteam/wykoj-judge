@@ -1,7 +1,7 @@
 import threading
 
 
-class Threads:
+class ThreadsManager:
     def __init__(self):
         self.thread_ids = set()
         self._lock = threading.Lock()
@@ -23,4 +23,4 @@ class Threads:
         self.thread_ids.remove(thread_id)
 
 
-threads = Threads()
+threads_manager = ThreadsManager()
