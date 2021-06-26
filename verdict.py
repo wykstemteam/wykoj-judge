@@ -6,3 +6,5 @@ class Verdict(str, Enum):
     CE = 'ce'
     WA = 'wa'
     RTE = 'rte'
+    TLE = 'tle'
+    IE = 'ie'
