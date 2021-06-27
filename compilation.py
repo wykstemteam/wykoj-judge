@@ -70,7 +70,6 @@ def _judge_impl(submission: Submission, thread_id: int) -> Verdict:
                 if line:
                     a, b = line.split(':')
                     metadata[a] = b
-            print(metadata)
 
         if 'status' in metadata:
             status = metadata['status']
