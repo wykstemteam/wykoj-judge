@@ -1,6 +1,6 @@
 from enum import Enum
 
 
-class Languages(str, Enum):
+class Language(str, Enum):
     cpp = 'cpp'
     py = 'py'

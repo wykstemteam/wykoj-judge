@@ -7,4 +7,4 @@ class Verdict(str, Enum):
     WA = 'wa'
     RE = 're'
     TLE = 'tle'
-    IE = 'ie'
+    SE = 'se'

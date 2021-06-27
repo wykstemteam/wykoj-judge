@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from languages import Languages
+from language import Language
 
 
 @dataclass
@@ -18,5 +18,5 @@ class TaskInfo:
     memory_limit: int  # megabytes
     grader: bool  # if uses grader
     grader_source_code: Optional[str]
-    grader_language: Optional[Languages]
+    grader_language: Optional[Language]
     test_cases: List[TestCase]

@@ -1,19 +1,21 @@
 import shutil
 import subprocess
-import requests
+from typing import Union, List
+
 import cachetools
+import requests
 
 import constants
-from languages import Languages
-from submission import Submission
+from language import Language
 from task_info import TaskInfo, TestCase
+from test_case_result import TestCaseResult
 from threads_manager import threads_manager
 from verdict import Verdict
 
 
 @cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
-def get_task_info(task: str) -> TaskInfo:
-    response = requests.get(f'{constants.FRONTEND_URL}/task/{task}/info')
+def get_task_info(task_id: str) -> TaskInfo:
+    response = requests.get(f'{constants.FRONTEND_URL}/task/{task_id}/info')
     response.raise_for_status()
     json = response.json()
     return TaskInfo(float(json['time_limit']),
@@ -27,29 +29,36 @@ def get_task_info(task: str) -> TaskInfo:
                               tc.get('output')) for tc in json['test_cases']])
 
 
-def judge(submission: Submission, thread_id: int) -> Verdict:
+def judge(code: str, submission_id: str, task_id: str, language: Language, thread_id: int) -> None:
     threads_manager.add_thread(thread_id)
-    verdict = _judge_impl(submission, thread_id)
+    verdict = _judge_impl(code, task_id, language, thread_id)
 
     # cleanup sandbox
     cleanup_proc = subprocess.run(['isolate', '-b', str(thread_id), '--cleanup'],
                                   text=True,
                                   stdout=subprocess.PIPE)
     if cleanup_proc.returncode != 0:
-        return Verdict.IE
+        verdict = Verdict.SE
 
     threads_manager.remove_thread(thread_id)
-    return verdict
+    report_url = f'{constants.FRONTEND_URL}/submission/{submission_id}/report'
+    if type(verdict) is Verdict:
+        response = requests.post(report_url,
+                                 json={'verdict': verdict})
+    else:
+        response = requests.post(report_url,
+                                 json={'test_cases_results': verdict})
+    response.raise_for_status()
 
 
-def _judge_impl(submission: Submission, thread_id: int) -> Verdict:
-    code_path = f'run/code{thread_id}.{submission.language}'
+def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> Union[Verdict, List[TestCaseResult]]:
+    code_path = f'run/code{thread_id}.{language}'
     executable_path = f'run/code{thread_id}'
     metadata_path = f'run/metadata{thread_id}.txt'
     with open(code_path, 'w') as f:
-        f.write(submission.code)  # write to run\codeX.xxx
+        f.write(code)  # write to run\codeX.xxx
 
-    if submission.language == Languages.cpp:
+    if language == Language.cpp:
         compile_proc = subprocess.run(['g++', '-O2', '-o', executable_path, code_path],
                                       text=True,
                                       stderr=subprocess.PIPE)
@@ -61,42 +70,54 @@ def _judge_impl(submission: Submission, thread_id: int) -> Verdict:
                                    text=True,
                                    stdout=subprocess.PIPE)
         if init_proc.returncode != 0:
-            return Verdict.IE
+            return Verdict.SE
 
         box_path = f'{init_proc.stdout.strip()}/box'
         shutil.copy(executable_path, box_path)  # copies executable to sandbox
 
-        time_limit = 1.0  # in seconds
-        memory_limit = 256  # in megabytes
+        task_info = get_task_info(task_id)
+        test_case_results = []
+        for i, test_case in enumerate(task_info.test_cases):
+            run_proc = subprocess.run(['isolate',
+                                       '-M', metadata_path,  # metadata
+                                       '-b', str(thread_id),  # sandbox id
+                                       '-t', str(task_info.time_limit),
+                                       '-w', str(task_info.time_limit + 1),  # wall time to prevent sleeping programs
+                                       '-m', str(task_info.memory_limit * 1024),  # in kilobytes
+                                       '--stderr-to-stdout',
+                                       '--silent',  # tells isolate to be silent
+                                       '--run', f'code{thread_id}'],
+                                      input=test_case.input,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE,
+                                      text=True)
 
-        run_proc = subprocess.run(['isolate',
-                                   '-M', metadata_path,  # metadata
-                                   '-b', str(thread_id),  # sandbox id
-                                   '-t', str(time_limit),
-                                   '-w', str(time_limit + 1),  # wall time to prevent sleeping programs
-                                   '-m', str(memory_limit * 1024),  # in kilobytes
-                                   '--stderr-to-stdout',
-                                   '--silent',  # tells isolate to be silent
-                                   '--run', f'code{thread_id}'],
-                                  input='placeholder',
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE,
-                                  text=True)
+            metadata = {}
+            with open(metadata_path) as f:
+                for line in f.readlines():
+                    line = line.strip()
+                    if line:
+                        a, b = line.split(':')
+                        metadata[a] = b
 
-        metadata = {}
-        with open(metadata_path) as f:
-            for line in f.readlines():
-                line = line.strip()
-                if line:
-                    a, b = line.split(':')
-                    metadata[a] = b
+            verdict = Verdict.AC
+            if run_proc.stdout.strip() != test_case.output.strip():
+                verdict = Verdict.WA
+            if 'status' in metadata:
+                status = metadata['status']
+                if status == 'RE' or status == 'SG' or status == 'XX':
+                    verdict = Verdict.RE
+                elif status == 'TO':
+                    verdict = Verdict.TLE
+                else:
+                    verdict = Verdict.SE
 
-        if 'status' in metadata:
-            status = metadata['status']
-            if status == 'RE' or status == 'SG' or status == 'XX':
-                return Verdict.RE
-            if status == 'TO':
-                return Verdict.TLE
-            return Verdict.IE
-
-        return Verdict.AC
+            test_case_results.append(
+                TestCaseResult(test_case.subtask,
+                               i,
+                               verdict,
+                               100. if verdict == Verdict.AC else 0.,
+                               metadata['time'],
+                               metadata['max-rss'] / 1024)
+            )
+        return test_case_results
