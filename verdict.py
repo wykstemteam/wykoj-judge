@@ -5,6 +5,6 @@ class Verdict(str, Enum):
     AC = 'ac'
     CE = 'ce'
     WA = 'wa'
-    RTE = 'rte'
+    RE = 're'
     TLE = 'tle'
     IE = 'ie'

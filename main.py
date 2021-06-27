@@ -11,10 +11,15 @@ MAX_THREAD_NO = 10
 
 
 @app.post('/')
-async def judge_solution(submission: Submission):
+def judge_solution(submission: Submission):
     thread_id = threads_manager.get_new_thread_id()
     while thread_id > MAX_THREAD_NO:
         thread_id = threads_manager.get_new_thread_id()
     thread = threading.Thread(target=judge, args=[submission, thread_id], daemon=True)
     thread.start()
     return {}
+
+
+@app.get('/')
+def home():
+    return 'hi'
