@@ -1,10 +1,30 @@
 import shutil
 import subprocess
+import requests
+import cachetools
 
+import constants
 from languages import Languages
 from submission import Submission
+from task_info import TaskInfo, TestCase
 from threads_manager import threads_manager
 from verdict import Verdict
+
+
+@cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=1))
+def get_task_info(task: str) -> TaskInfo:
+    response = requests.get(f'{constants.FRONTEND_URL}/task/{task}/info')
+    assert response.status_code == 200
+    json = response.json()
+    return TaskInfo(json['time_limit'],
+                    json['memory_limit'],
+                    json['grader'],
+                    json['grader_source_code'],
+                    json['grader_language'],
+                    [TestCase(tc['subtask'],
+                              tc['test_case'],
+                              tc['input'],
+                              tc.get('output')) for tc in json['test_cases']])
 
 
 def judge(submission: Submission, thread_id: int) -> Verdict:
@@ -30,7 +50,7 @@ def _judge_impl(submission: Submission, thread_id: int) -> Verdict:
         f.write(submission.code)  # write to run\codeX.xxx
 
     if submission.language == Languages.cpp:
-        compile_proc = subprocess.run(['g++', '-O1', '-o', executable_path, code_path],
+        compile_proc = subprocess.run(['g++', '-O2', '-o', executable_path, code_path],
                                       text=True,
                                       stderr=subprocess.PIPE)
         if compile_proc.returncode != 0:
