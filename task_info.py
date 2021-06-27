@@ -17,6 +17,6 @@ class TaskInfo:
     time_limit: float  # seconds
     memory_limit: int  # megabytes
     grader: bool  # if uses grader
-    grader_source_code: str
-    grader_language: Languages
+    grader_source_code: Optional[str]
+    grader_language: Optional[Languages]
     test_cases: List[TestCase]

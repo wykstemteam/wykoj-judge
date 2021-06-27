@@ -11,16 +11,16 @@ from threads_manager import threads_manager
 from verdict import Verdict
 
 
-@cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=1))
+@cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
 def get_task_info(task: str) -> TaskInfo:
     response = requests.get(f'{constants.FRONTEND_URL}/task/{task}/info')
-    assert response.status_code == 200
+    response.raise_for_status()
     json = response.json()
-    return TaskInfo(json['time_limit'],
+    return TaskInfo(float(json['time_limit']),
                     json['memory_limit'],
                     json['grader'],
-                    json['grader_source_code'],
-                    json['grader_language'],
+                    json.get('grader_source_code'),
+                    json.get('grader_language'),
                     [TestCase(tc['subtask'],
                               tc['test_case'],
                               tc['input'],
