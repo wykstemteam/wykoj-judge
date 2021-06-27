@@ -17,7 +17,7 @@ def get_task_info(task: str) -> TaskInfo:
     response.raise_for_status()
     json = response.json()
     return TaskInfo(float(json['time_limit']),
-                    json['memory_limit'],
+                    int(json['memory_limit']),
                     json['grader'],
                     json.get('grader_source_code'),
                     json.get('grader_language'),
