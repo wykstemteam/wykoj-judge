@@ -1,22 +1,24 @@
+import subprocess
 import threading
 
 from fastapi import FastAPI
 
+import constants
 from judge import judge
 from language import Language
 from submission import Submission
 from threads_manager import threads_manager
 
 app = FastAPI()
-MAX_THREAD_NO = 10
 
 
 @app.post('/judge')
 def judge_solution(submission: Submission, submission_id: int, task_id: str, language: Language):
     thread_id = threads_manager.get_new_thread_id()
-    while thread_id > MAX_THREAD_NO:
+    while thread_id >= constants.MAX_THREAD_NO:
         thread_id = threads_manager.get_new_thread_id()
-    thread = threading.Thread(target=judge, args=[submission, submission_id, task_id, language, thread_id], daemon=True)
+    thread = threading.Thread(target=judge, args=[submission.source_code, submission_id, task_id, language, thread_id],
+                              daemon=True)
     thread.start()
     return {}
 
@@ -39,3 +41,10 @@ def home():
 其實對事情的沉默，並不是逃避，更不是麻木的表現，而沉默往往卻是最理智、冷靜的表現。如果我當面勸外婆不要再燒香拜神，避免身體出任何問題，外婆很大機會因為自己的信仰而不會接納我的意見，更有可能會與我吵架，以不和收場。我固然不希望事情會發展成這樣的地步，因此我認為沉默是必要的。選擇了沉默的時候，能帶給我更多的思考時間，更能避免冒犯外婆。而更多的思考時間，亦能讓我作出更好的決定。
 我回到家中，便打電話給外婆。
 「喂，婆婆，我是允行，下星期六你有空嗎？不如我陪你到醫院做一次身體檢查吧。」'''
+
+
+@app.on_event('startup')
+def startup():
+    # cleanup sandbox
+    cleanup_proc = subprocess.run(['isolate', '--silent', '--cleanup'])
+    assert cleanup_proc.returncode == 0

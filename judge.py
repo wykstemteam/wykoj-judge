@@ -18,6 +18,14 @@ def get_task_info(task_id: str) -> TaskInfo:
     response = requests.get(f'{constants.FRONTEND_URL}/task/{task_id}/info')
     response.raise_for_status()
     json = response.json()
+    # json = {"grader": False, "memory_limit": 256,
+    #         "test_cases": [{"input": "1 1\n", "output": "Quadrant I\n", "subtask": 1, "test_case": 1},
+    #                        {"input": "-50 -33\n", "output": "Quadrant III\n", "subtask": 1, "test_case": 2},
+    #                        {"input": "94 -87\n", "output": "Quadrant IV\n", "subtask": 1, "test_case": 3},
+    #                        {"input": "-100 100\n", "output": "Quadrant II\n", "subtask": 1, "test_case": 4},
+    #                        {"input": "0 -24\n", "output": "None\n", "subtask": 1, "test_case": 5},
+    #                        {"input": "66 0\n", "output": "None\n", "subtask": 1, "test_case": 6},
+    #                        {"input": "0 0\n", "output": "None\n", "subtask": 1, "test_case": 7}], "time_limit": 1.0}
     return TaskInfo(float(json['time_limit']),
                     int(json['memory_limit']),
                     json['grader'],
@@ -30,6 +38,7 @@ def get_task_info(task_id: str) -> TaskInfo:
 
 
 def judge(code: str, submission_id: str, task_id: str, language: Language, thread_id: int) -> None:
+    # print(thread_id)
     threads_manager.add_thread(thread_id)
     verdict = _judge_impl(code, task_id, language, thread_id)
 
@@ -41,13 +50,20 @@ def judge(code: str, submission_id: str, task_id: str, language: Language, threa
         verdict = Verdict.SE
 
     threads_manager.remove_thread(thread_id)
+    # print(verdict)
     report_url = f'{constants.FRONTEND_URL}/submission/{submission_id}/report'
     if type(verdict) is Verdict:
         response = requests.post(report_url,
                                  json={'verdict': verdict})
     else:
         response = requests.post(report_url,
-                                 json={'test_cases_results': verdict})
+                                 json={'test_cases_results': [{'subtask': v.subtask,
+                                                               'test_case': v.test_case,
+                                                               'verdict': v.verdict,
+                                                               'score': v.score,
+                                                               'time_used': v.time_used,
+                                                               'memory_used': v.memory_used}
+                                                              for v in verdict]})
     response.raise_for_status()
 
 
@@ -58,6 +74,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
     with open(code_path, 'w') as f:
         f.write(code)  # write to run\codeX.xxx
 
+    # assume no grader for now
     if language == Language.cpp:
         compile_proc = subprocess.run(['g++', '-O2', '-o', executable_path, code_path],
                                       text=True,
@@ -117,7 +134,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                                i,
                                verdict,
                                100. if verdict == Verdict.AC else 0.,
-                               metadata['time'],
-                               metadata['max-rss'] / 1024)
+                               float(metadata['time']),
+                               int(metadata['max-rss']) / 1024)
             )
         return test_case_results
