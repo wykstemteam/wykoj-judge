@@ -1,2 +1,5 @@
 fastapi[all]>=0.65.2
 requests>=2.25.1
+uvicorn>=0.14.0
+cachetools>=4.2.2
+pydantic>=1.8.2
