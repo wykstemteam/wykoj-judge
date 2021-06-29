@@ -1,9 +1,12 @@
+import json
+import os
 import subprocess
 import sys
 import threading
+from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 
 import constants
 from judge import judge
@@ -15,14 +18,17 @@ app = FastAPI()
 
 
 @app.post('/judge')
-def judge_solution(submission: Submission, submission_id: int, task_id: str, language: Language):
+def judge_solution(submission: Submission, submission_id: int, task_id: str, language: Language,
+                   x_auth_token: Optional[str] = Header(None)):
+    if x_auth_token != constants.CONFIG.get('secret_key'):
+        return {'success': False}
     thread_id = threads_manager.get_new_thread_id()
     while thread_id >= constants.MAX_THREAD_NO:
         thread_id = threads_manager.get_new_thread_id()
     thread = threading.Thread(target=judge, args=[submission.source_code, submission_id, task_id, language, thread_id],
                               daemon=True)
     thread.start()
-    return {}
+    return {'success': True}
 
 
 @app.get('/')
@@ -45,14 +51,21 @@ def home():
 「喂，婆婆，我是允行，下星期六你有空嗎？不如我陪你到醫院做一次身體檢查吧。」'''
 
 
-@app.on_event('startup')
-def startup():
+if __name__ == '__main__':
+    if len(sys.argv) >= 2:
+        constants.DEBUG = True
+
     # cleanup sandbox
     cleanup_proc = subprocess.run(['isolate', '--silent', '--cleanup'])
     assert cleanup_proc.returncode == 0
 
+    if not os.path.exists('config.json'):
+        print('Please add a config.json file. Aborting.')
+        sys.exit(1)
+    with open('config.json', 'r') as f:
+        constants.CONFIG = json.load(f)
 
-if __name__ == '__main__':
-    if len(sys.argv) >= 2:
-        constants.DEBUG = True
-    uvicorn.run(app, port=80, host='0.0.0.0')
+    if constants.DEBUG:
+        uvicorn.run(app, port=8000)
+    else:
+        uvicorn.run(app, port=80, host='0.0.0.0')

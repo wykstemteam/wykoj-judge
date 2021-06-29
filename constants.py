@@ -1,3 +1,4 @@
 FRONTEND_URL = 'http://18.167.40.13'
 MAX_THREAD_NO = 10
 DEBUG = False
+CONFIG = {}
