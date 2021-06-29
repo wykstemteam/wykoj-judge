@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import threading
 
 import uvicorn
@@ -52,4 +53,6 @@ def startup():
 
 
 if __name__ == '__main__':
+    if len(sys.argv) >= 2:
+        constants.DEBUG = True
     uvicorn.run(app, port=80, host='0.0.0.0')
