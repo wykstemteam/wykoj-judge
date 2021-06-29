@@ -12,7 +12,7 @@ WYKOJ Judging Backend. Written in Python.
 * If building on WSL, v2 required T__T
 
 ```commandline
-sudo apt-get install libcap-dev asciidoc-base
+sudo apt-get install libcap-dev asciidoc-base make gcc
 cd ~/Downloads
 git clone https://github.com/ioi/isolate.git
 cd isolate
