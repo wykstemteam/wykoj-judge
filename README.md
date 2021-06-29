@@ -20,6 +20,7 @@ make
 sudo make install
 cd *whatever*
 git clone https://github.com/wykoj/wykoj-judge.git
+cd wykoj-judge
 pip3 install -r requirements.txt
 ```
 
