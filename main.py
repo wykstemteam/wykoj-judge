@@ -1,6 +1,7 @@
 import subprocess
 import threading
 
+import uvicorn
 from fastapi import FastAPI
 
 import constants
@@ -48,3 +49,7 @@ def startup():
     # cleanup sandbox
     cleanup_proc = subprocess.run(['isolate', '--silent', '--cleanup'])
     assert cleanup_proc.returncode == 0
+
+
+if __name__ == '__main__':
+    uvicorn.run(app, port=80, host='0.0.0.0')
