@@ -25,7 +25,8 @@ def get_task_info(task_id: str) -> TaskInfo:
                                {"input": "66 0\n", "output": "None\n", "subtask": 1, "test_case": 6},
                                {"input": "0 0\n", "output": "None\n", "subtask": 1, "test_case": 7}], "time_limit": 1.0}
     else:
-        response = requests.get(f'{constants.FRONTEND_URL}/task/{task_id}/info')
+        response = requests.get(f'{constants.FRONTEND_URL}/task/{task_id}/info',
+                                headers={'X-Auth-Token': constants.CONFIG.get('secret_key')})
         response.raise_for_status()
         json = response.json()
 
@@ -51,7 +52,7 @@ def judge(code: str, submission_id: str, task_id: str, language: Language, threa
                                   stdout=subprocess.PIPE)
     if cleanup_proc.returncode != 0:
         verdict = Verdict.SE
-
+    print(verdict)
     threads_manager.remove_thread(thread_id)
     if constants.DEBUG:
         print(verdict)
