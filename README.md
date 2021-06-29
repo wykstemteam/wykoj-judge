@@ -27,5 +27,5 @@ pip3 install -r requirements.txt
 ## Run
 
 ```commandline
-uvicorn main:app
+python3 main.py
 ```
