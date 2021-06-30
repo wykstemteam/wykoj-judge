@@ -70,7 +70,8 @@ def judge(code: str, submission_id: str, task_id: str, language: Language, threa
                                                                    'score': v.score,
                                                                    'time_used': v.time_used,
                                                                    'memory_used': v.memory_used}
-                                                                  for v in verdict]})
+                                                                  for v in verdict]},
+                                     headers={'X-Auth-Token': constants.CONFIG.get('secret_key')})
         response.raise_for_status()
 
 
