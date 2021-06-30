@@ -61,7 +61,8 @@ def judge(code: str, submission_id: str, task_id: str, language: Language, threa
         report_url = f'{constants.FRONTEND_URL}/submission/{submission_id}/report'
         if type(verdict) is Verdict:
             response = requests.post(report_url,
-                                     json={'verdict': verdict})
+                                     json={'verdict': verdict},
+                                     headers={'X-Auth-Token': constants.CONFIG.get('secret_key')})
         else:
             response = requests.post(report_url,
                                      json={'test_case_results': [{'subtask': v.subtask,
