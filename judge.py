@@ -64,13 +64,13 @@ def judge(code: str, submission_id: str, task_id: str, language: Language, threa
                                      json={'verdict': verdict})
         else:
             response = requests.post(report_url,
-                                     json={'test_cases_results': [{'subtask': v.subtask,
-                                                                   'test_case': v.test_case,
-                                                                   'verdict': v.verdict,
-                                                                   'score': v.score,
-                                                                   'time_used': v.time_used,
-                                                                   'memory_used': v.memory_used}
-                                                                  for v in verdict]},
+                                     json={'test_case_results': [{'subtask': v.subtask,
+                                                                  'test_case': v.test_case,
+                                                                  'verdict': v.verdict,
+                                                                  'score': v.score,
+                                                                  'time_used': v.time_used,
+                                                                  'memory_used': v.memory_used}
+                                                                 for v in verdict]},
                                      headers={'X-Auth-Token': constants.CONFIG.get('secret_key')})
         response.raise_for_status()
 
