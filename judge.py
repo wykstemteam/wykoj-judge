@@ -114,7 +114,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
 
     task_info = get_task_info(task_id)
     test_case_results = []
-    for i, test_case in enumerate(task_info.test_cases):
+    for test_case in task_info.test_cases:
         run_proc = subprocess.run(['isolate',
                                    '-M', metadata_path,  # metadata
                                    '-b', str(thread_id),  # sandbox id
@@ -151,7 +151,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
 
         test_case_results.append(
             TestCaseResult(subtask=test_case.subtask,
-                           test_case=i,
+                           test_case=test_case.test_case,
                            verdict=verdict,
                            score=100. if verdict == Verdict.AC else 0.,
                            time_used=float(metadata['time']),
