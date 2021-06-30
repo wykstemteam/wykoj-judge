@@ -25,6 +25,7 @@ def get_task_info(task_id: str) -> TaskInfo:
                                {"input": "66 0\n", "output": "None\n", "subtask": 1, "test_case": 6},
                                {"input": "0 0\n", "output": "None\n", "subtask": 1, "test_case": 7}], "time_limit": 1.0}
     else:
+        print(f'{constants.FRONTEND_URL}/task/{task_id}/info')
         response = requests.get(f'{constants.FRONTEND_URL}/task/{task_id}/info',
                                 headers={'X-Auth-Token': constants.CONFIG.get('secret_key')})
         response.raise_for_status()

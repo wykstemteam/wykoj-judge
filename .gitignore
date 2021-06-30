@@ -2,4 +2,4 @@
 __pycache__/
 isolate/
 run
-/config.json
+config.json

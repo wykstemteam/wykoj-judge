@@ -6,8 +6,8 @@ WYKOJ Judging Backend. Written in Python.
 
 ## Build (on Linux only)
 
-* Install [isolate](https://github.com/ioi/isolate)  
-* Clone this repository  
+* Install [isolate](https://github.com/ioi/isolate)
+* Clone this repository
 * Install pip requirements
 * If building on WSL, v2 required T__T
 
