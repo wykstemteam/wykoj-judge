@@ -6,3 +6,4 @@ class Language(str, Enum):
     cpp = 'cpp'
     ocaml = 'ocaml'
     py = 'py'
+    pas = 'pas'

@@ -104,6 +104,9 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
     elif language == Language.ocaml:
         compile_args = ['ocamlopt', '-S', '-o', executable_path, code_path]
 
+    elif language == Language.pas:
+        compile_args = ['-O2', '-Sg', '-v0', '-XS', code_path, '-o', executable_path]
+
     elif language == Language.py:
         running_args = [f'/usr/bin/python3.9', code_filename]
 
