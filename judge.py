@@ -143,6 +143,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                                    '--stderr-to-stdout',
                                    '--silent',  # tells isolate to be silent
                                    '--run',
+                                   '/usr/bin/sh',
                                    'run.sh'],
                                   input=test_case.input,
                                   stdout=subprocess.PIPE,
