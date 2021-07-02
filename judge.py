@@ -109,7 +109,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
         compile_args = ['fpc', '-O2', '-Sg', '-v0', '-XS', code_path, f'-o{executable_path}']
 
     elif language == Language.py:
-        running_args = ['/usr/bin/python3.9', 'code_filename']
+        running_args = ['/usr/bin/python3.9', code_filename]
 
     if compile_args:
         compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE)
