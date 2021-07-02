@@ -98,7 +98,8 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
 
     # assume no grader for now
     if language == Language.cpp or language == Language.c:
-        compile_proc = subprocess.run(['g++', '-O2', '-o', executable_path, code_path],
+        compile_proc = subprocess.run(['g++' if language == Language.cpp else 'gcc',
+                                       '-O2', '-o', executable_path, code_path],
                                       text=True,
                                       stderr=subprocess.PIPE)
         if compile_proc.returncode != 0:
