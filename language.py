@@ -7,3 +7,4 @@ class Language(str, Enum):
     ocaml = 'ocaml'
     py = 'py'
     pas = 'pas'
+    kt = 'kt'

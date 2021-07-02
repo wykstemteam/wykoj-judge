@@ -6,7 +6,7 @@ import cachetools
 import requests
 
 import constants
-from file_extensions import file_extensions
+from extensions import file_extensions
 from language import Language
 from task_info import TaskInfo, TestCase
 from test_case_result import TestCaseResult
@@ -106,10 +106,16 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
         compile_args = ['ocamlopt', '-S', '-o', executable_path, code_path]
 
     elif language == Language.pas:
-        compile_args = ['fpc', '-O2', '-Sg', code_path, f'-o{executable_path}']
+        compile_args = ['fpc', '-O2', '-Sg', '-v0', '-XS', code_path, f'-o{executable_path}']
+
+    elif language == Language.kt:
+        executable_filename += '.jar'
+        executable_path += '.jar'
+        compile_args = ['kotlinc', code_path, '-include-runtime', '-d', executable_path]
+        running_args = f'/usr/bin/java -jar {executable_filename}'
 
     elif language == Language.py:
-        running_args = [f'/usr/bin/python3.9', code_filename]
+        running_args = f'/usr/bin/python3.9 {code_filename}'
 
     if compile_args:
         compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE)
@@ -117,9 +123,14 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
             return Verdict.CE
 
         shutil.copy(executable_path, sandbox_path)  # copies executable to sandbox
-        running_args = [executable_filename]
+        if not running_args:
+            running_args = executable_filename
     else:
         shutil.copy(code_path, sandbox_path)  # copies code to sandbox
+
+    print(running_args)
+    with open(f'{sandbox_path}/run.sh', 'w') as f:
+        f.write(running_args)
 
     task_info = get_task_info(task_id)
     test_case_results = []
@@ -132,7 +143,9 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                                    '-m', str(task_info.memory_limit * 1024),  # in kilobytes
                                    '--stderr-to-stdout',
                                    '--silent',  # tells isolate to be silent
-                                   '--run'] + running_args,
+                                   '--run',
+                                   '/usr/bin/sh',
+                                   'run.sh'],
                                   input=test_case.input,
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE,
