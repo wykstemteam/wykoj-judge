@@ -11,6 +11,7 @@ from test_case_result import TestCaseResult
 from threads_manager import threads_manager
 from verdict import Verdict
 
+from file_extensions import file_extensions
 
 # @cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
 def get_task_info(task_id: str) -> TaskInfo:
@@ -76,7 +77,7 @@ def judge(code: str, submission_id: str, task_id: str, language: Language, threa
 
 
 def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> Union[Verdict, List[TestCaseResult]]:
-    code_filename = f'code{thread_id}.{language}'
+    code_filename = f'code{thread_id}.{file_extensions[language]}'
     code_path = f'run/{code_filename}'
     executable_filename = f'code{thread_id}'
     executable_path = f'run/{executable_filename}'
