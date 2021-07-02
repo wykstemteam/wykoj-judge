@@ -13,7 +13,7 @@ from threads_manager import threads_manager
 from verdict import Verdict
 
 
-@cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
+# @cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
 def get_task_info(task_id: str) -> TaskInfo:
     if constants.DEBUG:
         json = {"grader": False, "memory_limit": 256,
