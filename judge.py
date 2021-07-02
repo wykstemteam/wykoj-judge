@@ -5,13 +5,13 @@ from typing import Union, List
 import requests
 
 import constants
+from file_extensions import file_extensions
 from language import Language
 from task_info import TaskInfo, TestCase
 from test_case_result import TestCaseResult
 from threads_manager import threads_manager
 from verdict import Verdict
 
-from file_extensions import file_extensions
 
 # @cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
 def get_task_info(task_id: str) -> TaskInfo:
@@ -53,7 +53,6 @@ def judge(code: str, submission_id: str, task_id: str, language: Language, threa
                                   stdout=subprocess.PIPE)
     if cleanup_proc.returncode != 0:
         verdict = Verdict.SE
-    print(verdict)
     threads_manager.remove_thread(thread_id)
     if constants.DEBUG:
         print(verdict)
@@ -94,33 +93,26 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
         return Verdict.SE
     sandbox_path = f'{init_proc.stdout.strip()}/box'
 
+    compile_args = []
     running_args = []
-    compiled = False
 
     # assume no grader for now
     if language == Language.cpp or language == Language.c:
-        compile_proc = subprocess.run(['g++' if language == Language.cpp else 'gcc',
-                                       '-O2', '-o', executable_path, code_path],
-                                      text=True,
-                                      stderr=subprocess.PIPE)
-        if compile_proc.returncode != 0:
-            return Verdict.CE
-
-        compiled = True
+        compile_args = ['g++' if language == Language.cpp else 'gcc',
+                        '-O2', '-o', executable_path, code_path]
 
     elif language == Language.ocaml:
-        compile_proc = subprocess.run(['ocamlopt', '-S', '-o', executable_path, code_path],
-                                      text=True,
-                                      stderr=subprocess.PIPE)
-        if compile_proc.returncode != 0:
-            return Verdict.CE
-
-        compiled = True
+        compile_args = ['ocamlopt', '-S', '-o', executable_path, code_path]
 
     elif language == Language.py:
         running_args = [f'/usr/bin/python3.9', code_filename]
 
-    if compiled:
+    if compile_args:
+        compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE)
+        print(compile_proc.stderr)
+        if compile_proc.returncode != 0:
+            return Verdict.CE
+
         shutil.copy(executable_path, sandbox_path)  # copies executable to sandbox
         running_args = [executable_filename]
     else:
