@@ -111,7 +111,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
         executable_filename += '.jar'
         executable_path += '.jar'
         compile_args = ['kotlinc', code_path, '-include-runtime', '-d', executable_path]
-        running_args = ['java', '-jar', executable_filename]
+        running_args = ['/usr/bin/java', '-jar', executable_filename]
 
     elif language == Language.py:
         running_args = [f'/usr/bin/python3.9', code_filename]
