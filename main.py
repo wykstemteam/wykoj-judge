@@ -66,6 +66,6 @@ if __name__ == '__main__':
         constants.CONFIG = json.load(f)
 
     if constants.DEBUG:
-        uvicorn.run(app, port=8000)
+        uvicorn.run(app, port=8000, host='0.0.0.0')
     else:
         uvicorn.run(app, port=80, host='0.0.0.0')
