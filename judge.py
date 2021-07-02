@@ -128,6 +128,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
     else:
         shutil.copy(code_path, sandbox_path)  # copies code to sandbox
 
+    print(running_args)
     with open(f'{sandbox_path}/run.sh', 'w') as f:
         f.write(running_args)
 
