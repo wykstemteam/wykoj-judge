@@ -2,6 +2,7 @@ import shutil
 import subprocess
 from typing import Union, List
 
+import cachetools
 import requests
 
 import constants
@@ -13,7 +14,7 @@ from threads_manager import threads_manager
 from verdict import Verdict
 
 
-# @cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
+@cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
 def get_task_info(task_id: str) -> TaskInfo:
     if constants.DEBUG:
         json = {"grader": False, "memory_limit": 256,
@@ -112,7 +113,6 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
 
     if compile_args:
         compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE)
-        print(compile_proc.stderr)
         if compile_proc.returncode != 0:
             return Verdict.CE
 
