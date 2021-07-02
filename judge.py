@@ -2,7 +2,6 @@ import shutil
 import subprocess
 from typing import Union, List
 
-import cachetools
 import requests
 
 import constants
@@ -95,6 +94,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
     sandbox_path = f'{init_proc.stdout.strip()}/box'
 
     running_args = []
+    compiled = False
 
     # assume no grader for now
     if language == Language.cpp or language == Language.c:
@@ -105,14 +105,25 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
         if compile_proc.returncode != 0:
             return Verdict.CE
 
-        shutil.copy(executable_path, sandbox_path)  # copies executable to sandbox
+        compiled = True
 
-        running_args = [executable_filename]
+    elif language == Language.ocaml:
+        compile_proc = subprocess.run(['ocamlopt', '-S', '-o', executable_path, code_path],
+                                      text=True,
+                                      stderr=subprocess.PIPE)
+        if compile_proc.returncode != 0:
+            return Verdict.CE
+
+        compiled = True
 
     elif language == Language.py:
-        shutil.copy(code_path, sandbox_path)  # copies code to sandbox
-
         running_args = [f'/usr/bin/python3.9', code_filename]
+
+    if compiled:
+        shutil.copy(executable_path, sandbox_path)  # copies executable to sandbox
+        running_args = [executable_filename]
+    else:
+        shutil.copy(code_path, sandbox_path)  # copies code to sandbox
 
     task_info = get_task_info(task_id)
     test_case_results = []
