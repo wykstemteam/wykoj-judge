@@ -31,7 +31,7 @@ def prepare(language: Language, box_id: int, base_name: str, code: str) -> List[
     elif language == Language.pas:
         compile_args = ['fpc', '-O2', '-Sg', '-v0', '-XS', executable_path, '-o' + code_path]
     elif language == Language.py:
-        run_args = ['/usr/bin/python3.9', code_path]
+        run_args = ['/usr/bin/python3.9', code_filename]
 
     if compile_args:
         compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE)
