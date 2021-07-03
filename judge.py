@@ -16,7 +16,14 @@ from verdict import Verdict
 @cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
 def get_task_info(task_id: str) -> TaskInfo:
     if constants.DEBUG:
-        json = {"grader": False, "memory_limit": 256,
+        json = {"grader": True, 'grader_language': 'py', 'grader_source_code': '''
+import random
+import time
+
+random.seed(time.time())
+
+print(random.choice(["AC", "PS 69", "WA"]))
+        ''', "memory_limit": 256,
                 "test_cases": [{"input": "1 1\n", "output": "Quadrant I\n", "subtask": 1, "test_case": 1},
                                {"input": "-50 -33\n", "output": "Quadrant III\n", "subtask": 1, "test_case": 2},
                                {"input": "94 -87\n", "output": "Quadrant IV\n", "subtask": 1, "test_case": 3},
@@ -85,7 +92,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
     task_info = get_task_info(task_id)
     grader_run_args = []
     if task_info.grader:
-        grader_base_name = f'run/grader{thread_id}'
+        grader_base_name = f'grader{thread_id}'
         grader_run_args = compilation.prepare(task_info.grader_language, thread_id, grader_base_name,
                                               task_info.grader_source_code)
     test_case_results = []
