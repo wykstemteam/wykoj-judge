@@ -134,6 +134,8 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                     verdict = Verdict.WA
 
             else:
+                if test_case.output and test_case.output[-1] != '\n':  # again ensure output has trailing \n
+                    test_case.output += '\n'
                 target_output = ''.join([line.rstrip() + '\n' for line in test_case.output.split('\n') if line])
                 print(output)
                 print(target_output)
