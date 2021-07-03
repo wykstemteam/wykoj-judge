@@ -118,9 +118,10 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
             else:
                 return Verdict.SE
         else:
-            if run_proc.stdout and run_proc.stdout[-1] != '\n':  # again ensure output has trailing \n
-                run_proc.stdout += '\n'
-            output = ''.join([line.rstrip() + '\n' for line in run_proc.stdout.split('\n')])
+            output = run_proc.stdout
+            if output and output[-1] != '\n':  # again ensure output has trailing \n
+                output += '\n'
+            output = ''.join([line.rstrip() + '\n' for line in output.split('\n')])
             if task_info.grader:
                 input_lines_count = test_case.input.count('\n')
                 output_lines_count = output.count('\n')
@@ -134,9 +135,10 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                     verdict = Verdict.WA
 
             else:
-                if test_case.output and test_case.output[-1] != '\n':  # again ensure output has trailing \n
-                    test_case.output += '\n'
-                target_output = ''.join([line.rstrip() + '\n' for line in test_case.output.split('\n') if line])
+                target_output = test_case.output
+                if target_output and target_output[-1] != '\n':  # again ensure output has trailing \n
+                    target_output += '\n'
+                target_output = ''.join([line.rstrip() + '\n' for line in target_output.split('\n')])
                 print(output)
                 print(target_output)
                 if output != target_output:
