@@ -13,7 +13,7 @@ class CompilationError(Exception):
 def prepare(language: Language, box_id: int, base_name: str, code: str) -> List[str]:
     subprocess.run(['isolate', '-b', str(box_id), '--silent', '--cleanup'])
     sandbox_path = subprocess.run(['isolate', '-b', str(box_id), '--init'], stdout=subprocess.PIPE,
-                                  text=True).stdout.strip()
+                                  text=True).stdout.strip() + '/box'
     code_filename = f'{base_name}.{extensions.file_extensions[language]}'
     executable_path = f'run/{base_name}'
     code_path = f'run/{code_filename}'
