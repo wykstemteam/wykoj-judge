@@ -43,7 +43,6 @@ def get_task_info(task_id: str) -> TaskInfo:
 
 
 def judge(code: str, submission_id: str, task_id: str, language: Language, thread_id: int) -> None:
-    # print(thread_id)
     threads_manager.add_thread(thread_id)
     verdict = _judge_impl(code, task_id, language, thread_id)
 

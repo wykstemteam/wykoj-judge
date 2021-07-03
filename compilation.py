@@ -49,6 +49,13 @@ def run(run_args: List[str], box_id: int, input_: str,
         metadata_path: Optional[str] = None,
         time_limit: Optional[float] = None,
         memory_limit: Optional[int] = None) -> subprocess.CompletedProcess:
+    print(['isolate'] +
+          (['-M', metadata_path] if metadata_path else []) +
+          (['-b', str(box_id)] if box_id else []) +
+          (['-t', str(time_limit)] if time_limit else []) +
+          (['-w', str(time_limit + 1)] if time_limit else []) +  # wall time
+          (['-m', str(memory_limit * 1024)] if memory_limit else []) +  # in kilobytes
+          ['--stderr-to-stdout', '--silent', '--run', '--'] + run_args)
     return subprocess.run(['isolate'] +
                           (['-M', metadata_path] if metadata_path else []) +
                           (['-b', str(box_id)] if box_id else []) +
