@@ -1,12 +1,11 @@
-import shutil
 import subprocess
 from typing import Union, List
 
 import cachetools
 import requests
 
+import compilation
 import constants
-from extensions import file_extensions
 from language import Language
 from task_info import TaskInfo, TestCase
 from test_case_result import TestCaseResult
@@ -77,67 +76,29 @@ def judge(code: str, submission_id: str, task_id: str, language: Language, threa
 
 
 def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> Union[Verdict, List[TestCaseResult]]:
-    code_filename = f'code{thread_id}.{file_extensions[language]}'
-    code_path = f'run/{code_filename}'
-    executable_filename = f'code{thread_id}'
-    executable_path = f'run/{executable_filename}'
+    base_name = f'code{thread_id}'
     metadata_path = f'run/metadata{thread_id}.txt'
-
-    with open(code_path, 'w') as f:
-        f.write(code)  # write to run\codeX.xxx
-
-    # initialises isolate sandbox
-    init_proc = subprocess.run(['isolate', '-b', str(thread_id), '--init'],
-                               text=True,
-                               stdout=subprocess.PIPE)
-    if init_proc.returncode != 0:
-        return Verdict.SE
-    sandbox_path = f'{init_proc.stdout.strip()}/box'
-
-    compile_args = []
-    running_args = []
-
-    # assume no grader for now
-    if language == Language.cpp or language == Language.c:
-        compile_args = ['g++' if language == Language.cpp else 'gcc',
-                        '-O2', '-o', executable_path, code_path]
-
-    elif language == Language.ocaml:
-        compile_args = ['ocamlopt', '-S', '-o', executable_path, code_path]
-
-    elif language == Language.pas:
-        compile_args = ['fpc', '-O2', '-Sg', '-v0', '-XS', code_path, f'-o{executable_path}']
-
-    elif language == Language.py:
-        running_args = ['/usr/bin/python3.9', code_filename]
-
-    if compile_args:
-        compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE)
-        if compile_proc.returncode != 0:
-            return Verdict.CE
-
-        shutil.copy(executable_path, sandbox_path)  # copies executable to sandbox
-        if not running_args:
-            running_args = [executable_filename]
-    else:
-        shutil.copy(code_path, sandbox_path)  # copies code to sandbox
+    try:
+        run_args = compilation.prepare(language, thread_id, base_name, code)
+    except compilation.CompilationError:
+        return Verdict.CE
 
     task_info = get_task_info(task_id)
+    grader_run_args = []
+    if task_info.grader:
+        grader_base_name = f'run/grader{thread_id}'
+        grader_run_args = compilation.prepare(task_info.grader_language, thread_id, grader_base_name,
+                                              task_info.grader_source_code)
     test_case_results = []
     for test_case in task_info.test_cases:
-        run_proc = subprocess.run(['isolate',
-                                   '-M', metadata_path,  # metadata
-                                   '-b', str(thread_id),  # sandbox id
-                                   '-t', str(task_info.time_limit),
-                                   '-w', str(task_info.time_limit + 1),  # wall time to prevent sleeping programs
-                                   '-m', str(task_info.memory_limit * 1024),  # in kilobytes
-                                   '--stderr-to-stdout',
-                                   '--silent',  # tells isolate to be silent
-                                   '--run'] + running_args,
-                                  input=test_case.input,
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE,
-                                  text=True)
+        if test_case.input[:-1] != '\n':
+            test_case.input += '\n'  # ensures input has trailing \n
+        run_proc = compilation.run(run_args,
+                                   thread_id,
+                                   test_case.input,
+                                   metadata_path,
+                                   task_info.time_limit,
+                                   task_info.memory_limit)
 
         metadata = {}
         with open(metadata_path) as f:
@@ -148,8 +109,6 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                     metadata[a] = b
 
         verdict = Verdict.AC
-        if run_proc.stdout.strip() != test_case.output.strip():
-            verdict = Verdict.WA
         if 'status' in metadata:
             status = metadata['status']
             if status == 'RE' or status == 'SG' or status == 'XX':
@@ -157,7 +116,25 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
             elif status == 'TO':
                 verdict = Verdict.TLE
             else:
-                verdict = Verdict.SE
+                return Verdict.SE
+        else:
+            output = ''.join(line.rstrip() + '\n' for line in run_proc.stdout)
+            if task_info.grader:
+                input_lines_count = test_case.input.count('\n')
+                output_lines_count = output.count('\n')
+                grader_input = f'{input_lines_count}\n' + f'{test_case.input}\n' + \
+                               f'{output_lines_count}\n' + f'{output}\n'
+                grader_proc = compilation.run(grader_run_args, thread_id, grader_input)
+                if grader_proc.returncode != 0:
+                    return Verdict.SE
+                grader_output = grader_proc.stdout.strip()
+                if grader_output == 'WA':
+                    verdict = Verdict.WA
+
+            else:
+                target_output = ''.join(line.rstrip() + '\n' for line in test_case.output)
+                if output != target_output:
+                    verdict = Verdict.WA
 
         test_case_results.append(
             TestCaseResult(subtask=test_case.subtask,
