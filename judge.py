@@ -119,7 +119,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                 return Verdict.SE
         else:
             if run_proc.stdout and run_proc.stdout[-1] != '\n':  # again ensure output has trailing \n
-                run_proc.stdout[-1] += '\n'
+                run_proc.stdout += '\n'
             output = ''.join([line.rstrip() + '\n' for line in run_proc.stdout.split('\n')])
             if task_info.grader:
                 input_lines_count = test_case.input.count('\n')
