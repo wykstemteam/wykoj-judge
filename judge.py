@@ -119,7 +119,6 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                 return Verdict.SE
         else:
             output = ''.join(line.rstrip() + '\n' for line in run_proc.stdout.split('\n'))
-            print(output)
             if task_info.grader:
                 input_lines_count = test_case.input.count('\n')
                 output_lines_count = output.count('\n')
@@ -133,7 +132,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                     verdict = Verdict.WA
 
             else:
-                target_output = ''.join(line.rstrip() + '\n' for line in test_case.output)
+                target_output = ''.join(line.rstrip() + '\n' for line in test_case.output.split('\n'))
                 if output != target_output:
                     verdict = Verdict.WA
 
