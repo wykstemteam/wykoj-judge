@@ -1,4 +1,4 @@
-FRONTEND_URL = 'http://18.163.253.22:3000'
+FRONTEND_URL = 'http://wykoj.owo.idv.hk'
 MAX_THREAD_NO = 14
 DEBUG = False
 CONFIG = {}
