@@ -124,7 +124,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                            test_case=test_case.test_case,
                            verdict=verdict,
                            score=0.,
-                           time_used=float(metadata['time']),
+                           time_used=min(float(metadata['time']), task_info.time_limit),
                            memory_used=int(metadata['max-rss']) / 1024))
         test_case_outputs.append(run_proc.stdout)
 
