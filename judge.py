@@ -32,13 +32,10 @@ print(random.choice(["AC", "PS 69", "WA"]))
                                {"input": "66 0\n", "output": "None\n", "subtask": 1, "test_case": 6},
                                {"input": "0 0\n", "output": "None\n", "subtask": 1, "test_case": 7}], "time_limit": 1.0}
     else:
-        print(f'{constants.FRONTEND_URL}/task/{task_id}/info')
         response = requests.get(f'{constants.FRONTEND_URL}/task/{task_id}/info',
                                 headers={'X-Auth-Token': constants.CONFIG.get('secret_key')})
         response.raise_for_status()
         json = response.json()
-
-    print(json['grader'])
 
     return TaskInfo(float(json['time_limit']),
                     int(json['memory_limit']),
