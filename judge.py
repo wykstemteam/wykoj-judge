@@ -156,7 +156,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                 test_case_results[i].verdict = Verdict.WA
                 test_case_results[i].score = 0.
             elif grader_output == 'AC':
-                test_case_results[i] = Verdict.AC
+                test_case_results[i].verdict = Verdict.AC
                 test_case_results[i].score = 100.
             else:  # supposedly is PS
                 _, score = grader_output.split()
