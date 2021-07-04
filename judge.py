@@ -16,7 +16,7 @@ from verdict import Verdict
 @cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
 def get_task_info(task_id: str) -> TaskInfo:
     if constants.DEBUG:
-        json = {"grader": True, 'grader_language': 'py', 'grader_source_code': '''
+        json = {'grader': True, 'grader_language': 'py', 'grader_source_code': '''
 import random
 import time
 
@@ -37,6 +37,8 @@ print(random.choice(["AC", "PS 69", "WA"]))
                                 headers={'X-Auth-Token': constants.CONFIG.get('secret_key')})
         response.raise_for_status()
         json = response.json()
+
+    print(json['grader'])
 
     return TaskInfo(float(json['time_limit']),
                     int(json['memory_limit']),
