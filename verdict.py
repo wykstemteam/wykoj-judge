@@ -8,3 +8,4 @@ class Verdict(str, Enum):
     RE = 're'
     TLE = 'tle'
     SE = 'se'
+    PS = 'ps'

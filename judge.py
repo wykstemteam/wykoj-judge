@@ -89,12 +89,8 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
         return Verdict.CE
 
     task_info = get_task_info(task_id)
-    grader_run_args = []
-    if task_info.grader:
-        grader_base_name = f'grader{thread_id}'
-        grader_run_args = compilation.prepare(task_info.grader_language, thread_id, grader_base_name,
-                                              task_info.grader_source_code)
     test_case_results = []
+    test_case_outputs = []
     for test_case in task_info.test_cases:
         if test_case.input[:-1] != '\n':
             test_case.input += '\n'  # ensures input has trailing \n
@@ -122,37 +118,61 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
                 verdict = Verdict.TLE
             else:
                 return Verdict.SE
-        else:
-            output = run_proc.stdout
-            if output and output[-1] != '\n':  # again ensure output has trailing \n
-                output += '\n'
-            output = ''.join([line.rstrip() + '\n' for line in output.split('\n')])
-            if task_info.grader:
-                input_lines_count = test_case.input.count('\n')
-                output_lines_count = output.count('\n')
-                grader_input = f'{input_lines_count}\n' + f'{test_case.input}\n' + \
-                               f'{output_lines_count}\n' + f'{output}\n'
-                grader_proc = compilation.run(grader_run_args, thread_id, grader_input)
-                if grader_proc.returncode != 0:
-                    return Verdict.SE
-                grader_output = grader_proc.stdout.strip()
-                if grader_output == 'WA':
-                    verdict = Verdict.WA
-
-            else:
-                target_output = test_case.output
-                if target_output and target_output[-1] != '\n':  # again ensure output has trailing \n
-                    target_output += '\n'
-                target_output = ''.join([line.rstrip() + '\n' for line in target_output.split('\n')])
-                if output != target_output:
-                    verdict = Verdict.WA
 
         test_case_results.append(
             TestCaseResult(subtask=test_case.subtask,
                            test_case=test_case.test_case,
                            verdict=verdict,
-                           score=100. if verdict == Verdict.AC else 0.,
+                           score=0.,
                            time_used=float(metadata['time']),
                            memory_used=int(metadata['max-rss']) / 1024))
+        test_case_outputs.append(run_proc.stdout)
+
+    grader_run_args = []
+    if task_info.grader:
+        grader_base_name = f'grader{thread_id}'
+        grader_run_args = compilation.prepare(task_info.grader_language, thread_id, grader_base_name,
+                                              task_info.grader_source_code)
+    for i in range(len(test_case_outputs)):
+        if test_case_results[i].verdict != Verdict.AC:  # RE, TLE etc.
+            continue
+
+        test_case = task_info.test_cases[i]
+        output = test_case_outputs[i]
+        if output and output[-1] != '\n':  # again ensure output has trailing \n
+            output += '\n'
+        output = ''.join([line.rstrip() + '\n' for line in output.split('\n')])
+
+        if task_info.grader:
+            input_lines_count = test_case.input.count('\n')
+            output_lines_count = output.count('\n')
+            grader_input = f'{input_lines_count}\n' + f'{test_case.input}\n' + \
+                           f'{output_lines_count}\n' + f'{output}\n'
+            grader_proc = compilation.run(grader_run_args, thread_id, grader_input)
+            if grader_proc.returncode != 0:
+                return Verdict.SE
+            grader_output = grader_proc.stdout.strip()
+            if grader_output == 'WA':
+                test_case_results[i].verdict = Verdict.WA
+                test_case_results[i].score = 0.
+            elif grader_output != 'AC':
+                test_case_results[i] = Verdict.AC
+                test_case_results[i].score = 100.
+            else:  # supposedly is PS
+                _, score = grader_output.split()
+                test_case_results[i].verdict = Verdict.PS
+                test_case_results[i].score = float(score)
+
+        else:
+            target_output = test_case.output
+            if target_output and target_output[-1] != '\n':  # again ensure output has trailing \n
+                target_output += '\n'
+            target_output = ''.join([line.rstrip() + '\n' for line in target_output.split('\n')])
+            if output != target_output:
+                test_case_results[i].verdict = Verdict.WA
+                test_case_results[i].score = 0.
+            else:
+                test_case_results[i].verdict = Verdict.AC
+                test_case_results[i].score = 100.
 
     return test_case_results
