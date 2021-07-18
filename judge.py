@@ -1,7 +1,6 @@
 import subprocess
 from typing import Union, List
 
-import cachetools
 import requests
 
 import compilation
@@ -13,7 +12,6 @@ from threads_manager import threads_manager
 from verdict import Verdict
 
 
-@cachetools.cached(cache=cachetools.TTLCache(maxsize=10, ttl=60))
 def get_task_info(task_id: str) -> TaskInfo:
     if constants.DEBUG:
         json = {'grader': True, 'grader_language': 'py', 'grader_source_code': '''
