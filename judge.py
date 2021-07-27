@@ -1,5 +1,5 @@
 import subprocess
-from typing import Union, List
+from typing import List, Union
 
 import requests
 
@@ -8,7 +8,6 @@ import constants
 from language import Language
 from task_info import TaskInfo, TestCase
 from test_case_result import TestCaseResult
-from threads_manager import threads_manager
 from verdict import Verdict
 
 
@@ -48,7 +47,6 @@ print(random.choice(["AC", "PS 69", "WA"]))
 
 
 def judge(code: str, submission_id: str, task_id: str, language: Language, thread_id: int) -> None:
-    threads_manager.add_thread(thread_id)
     verdict = _judge_impl(code, task_id, language, thread_id)
 
     # cleanup sandbox
@@ -57,7 +55,6 @@ def judge(code: str, submission_id: str, task_id: str, language: Language, threa
                                   stdout=subprocess.PIPE)
     if cleanup_proc.returncode != 0:
         verdict = Verdict.SE
-    threads_manager.remove_thread(thread_id)
     if constants.DEBUG:
         print(verdict)
     else:
@@ -91,7 +88,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
     test_case_results = []
     test_case_outputs = []
     for test_case in task_info.test_cases:
-        if test_case.input[:-1] != '\n':
+        if test_case.input[-1:] != '\n':
             test_case.input += '\n'  # ensures input has trailing \n
         run_proc = compilation.run(run_args,
                                    thread_id,
