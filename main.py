@@ -39,7 +39,7 @@ def judge_worker(thread_id: int) -> None:
     while True:
         args = judge_queue.get()
         try:
-            judge(*args)
+            judge(*args, thread_id)
         except Exception as e:
             print(
                 f"Error in judging submission:\n" +

@@ -88,7 +88,7 @@ def _judge_impl(code: str, task_id: str, language: Language, thread_id: int) -> 
     test_case_results = []
     test_case_outputs = []
     for test_case in task_info.test_cases:
-        if test_case.input[:-1] != '\n':
+        if test_case.input[-1:] != '\n':
             test_case.input += '\n'  # ensures input has trailing \n
         run_proc = compilation.run(run_args,
                                    thread_id,
