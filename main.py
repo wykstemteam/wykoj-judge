@@ -3,20 +3,19 @@ import os
 import subprocess
 import sys
 import threading
-import traceback
-from queue import Queue
 from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, Header
 
 import constants
-from judge import judge
+from common import pending_shutdown
+from judge_manager import JudgeManager
 from language import Language
 from submission import Submission
+from task_info_manager import TaskInfoManager
 
 app = FastAPI()
-judge_queue = Queue()
 
 
 @app.get('/')
@@ -28,27 +27,32 @@ def home():
 @app.post('/judge')
 def judge_solution(submission: Submission, submission_id: int, task_id: str, language: Language,
                    x_auth_token: Optional[str] = Header(None)):
-    if x_auth_token != constants.CONFIG.get('secret_key'):
+    if x_auth_token != constants.CONFIG['secret_key']:
         return {'success': False}
 
-    judge_queue.put((submission.source_code, submission_id, task_id, language))
+    with TaskInfoManager.lock:
+        if task_id in TaskInfoManager.waiting_judge_queue:
+            # Task info is being updated
+            TaskInfoManager.waiting_judge_queue[task_id].put(
+                (submission.source_code, submission_id, language)
+            )
+            return {'success': True}
+
+    if not TaskInfoManager.is_up_to_date(task_id):
+        # Task info needs to be updated
+        with TaskInfoManager.lock:
+            TaskInfoManager.pre_update_task_info(task_id)
+            TaskInfoManager.waiting_judge_queue[task_id].put(
+                (submission.source_code, submission_id, language)
+            )
+        return {'success': True}
+
+    task_info_path = TaskInfoManager.get_current_task_info_path(task_id)
+    JudgeManager.judge_queue.put((submission.source_code, submission_id, language, task_info_path))
     return {'success': True}
 
 
-def judge_worker(thread_id: int) -> None:
-    while True:
-        args = judge_queue.get()
-        try:
-            judge(*args, thread_id)
-        except Exception as e:
-            print(
-                f"Error in judging submission:\n" +
-                "".join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
-            )
-        judge_queue.task_done()
-
-
-if __name__ == '__main__':
+def main():
     if len(sys.argv) >= 2:
         constants.DEBUG = True
 
@@ -62,10 +66,29 @@ if __name__ == '__main__':
     with open('config.json') as f:
         constants.CONFIG = json.load(f)
 
+    TaskInfoManager.init()
+
+    threads = []
+
     for i in range(constants.MAX_THREAD_NO):
-        threading.Thread(target=judge_worker, args=(i,), daemon=True).start()
+        thread = threading.Thread(target=JudgeManager.judge_worker, args=(i,))
+        thread.start()
+        threads.append(thread)
+
+    # One thread for updating task info
+    thread = threading.Thread(target=TaskInfoManager.update_task_info_worker)
+    thread.start()
+    threads.append(thread)
 
     uvicorn.run(app, port=8000, host='0.0.0.0')
 
-    # Wait for all queued submissions to finish judging
-    judge_queue.join()
+    pending_shutdown.set()
+    print('Waiting for all queued submissions to finish judging')
+    for thread in threads:
+        thread.join()
+
+    TaskInfoManager.shutdown()
+
+
+if __name__ == '__main__':
+    main()
