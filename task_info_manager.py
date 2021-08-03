@@ -96,11 +96,6 @@ class TaskInfoManager:
 
     @staticmethod
     def update_task_info(task_id: str) -> None:
-        '''Retrieves task info from frontend.
-
-        Checks if task info is cached recently and valid.
-        Otherwise, stream task info from frontend to file.
-        '''
         if constants.DEBUG:
             return
 
