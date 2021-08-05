@@ -119,33 +119,41 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
         if task_info.grader:
             input_lines_count = test_case.input.count('\n')
             output_lines_count = output.count('\n')
-            grader_input = f'{input_lines_count}\n' + f'{test_case.input}\n' + \
-                           f'{output_lines_count}\n' + f'{output}\n'
+            grader_input = (
+                f'{input_lines_count}\n' + f'{test_case.input}'  # including trailing \n
+                f'{output_lines_count}\n' + f'{output}'
+            )
             grader_proc = compilation.run(grader_run_args, thread_id, grader_input)
             if grader_proc.returncode != 0:
                 return Verdict.SE
+
             grader_output = grader_proc.stdout.strip()
-            if grader_output == 'WA':
-                test_case_result.verdict = Verdict.WA
-                test_case_result.score = 0.
-            elif grader_output == 'AC':
+            if grader_output == 'AC':
                 test_case_result.verdict = Verdict.AC
-                test_case_result.score = 100.
-            else:  # supposedly is PS
-                _, score = grader_output.split()
-                test_case_result.verdict = Verdict.PS
-                test_case_result.score = float(score)
+                test_case_result.score = 100.0
+            elif grader_output == 'WA':
+                test_case_result.verdict = Verdict.WA
+                test_case_result.score = 0.0
+            else:  # Assume is PS
+                try:
+                    verdict, score = grader_output.split(maxsplit=1)
+                    assert verdict == "PS"
+                    test_case_result.verdict = Verdict.PS
+                    test_case_result.score = float(score)
+                    assert 0 <= test_case_result.score <= 100
+                except (ValueError, AssertionError):
+                    return Verdict.SE
 
         else:
             target_output = test_case.output
             if not target_output.endswith('\n'):  # again ensure output has trailing \n
                 target_output += '\n'
             target_output = ''.join([line.rstrip() + '\n' for line in target_output.split('\n')])
-            if output != target_output:
-                test_case_result.verdict = Verdict.WA
-                test_case_result.score = 0.
-            else:
+            if output == target_output:
                 test_case_result.verdict = Verdict.AC
-                test_case_result.score = 100.
+                test_case_result.score = 100.0
+            else:
+                test_case_result.verdict = Verdict.WA
+                test_case_result.score = 0.0
 
     return test_case_results
