@@ -51,7 +51,7 @@ class TaskInfoManager:
                 json.dump(TaskInfoManager.path_dict, f)
 
     @staticmethod
-    def get_current_task_info_path(task_id: str) -> None:
+    def get_current_task_info_path(task_id: str) -> str:
         with TaskInfoManager.lock:
             return TaskInfoManager.path_dict[task_id]
 
