@@ -18,7 +18,7 @@ from task_info_manager import TaskInfoManager
 app = FastAPI()
 
 
-@app.get('/judge')
+@app.get('/ping')
 def ping():
     return {'success': True}
 
