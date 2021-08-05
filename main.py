@@ -18,10 +18,9 @@ from task_info_manager import TaskInfoManager
 app = FastAPI()
 
 
-@app.get('/')
-def home():
-    with open('herny.txt', encoding='utf-8') as f:
-        return f.read()
+@app.get('/judge')
+def ping():
+    return {'success': True}
 
 
 @app.post('/judge')
