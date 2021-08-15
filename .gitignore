@@ -1,7 +1,9 @@
+.env/
 .idea/
 .task_info_cache/
 __pycache__/
 isolate/
 run/
+nohup.out
 config.json
 task_info_path.json

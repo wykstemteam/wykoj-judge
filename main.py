@@ -56,14 +56,17 @@ def main():
         constants.DEBUG = True
 
     # cleanup sandbox
-    cleanup_proc = subprocess.run(['isolate', '--silent', '--cleanup'])
-    assert cleanup_proc.returncode == 0
+    # cleanup_proc = subprocess.run(['isolate', '--silent', '--cleanup'])
+    # assert cleanup_proc.returncode == 0
 
     if not os.path.exists('config.json'):
         print('Please add a config.json file. Aborting.')
         sys.exit(1)
     with open('config.json') as f:
         constants.CONFIG = json.load(f)
+
+    if not os.path.exists('run'):
+        os.mkdir('run')
 
     TaskInfoManager.init()
 
