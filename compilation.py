@@ -24,7 +24,7 @@ def prepare(language: Language, box_id: int, base_name: str, code: str) -> List[
     compile_args = None
     run_args = None
     if language == Language.cpp:
-        compile_args = ['g++', '-O2', '-o', executable_path, code_path]
+        compile_args = ['g++', '-O2', '-o', '-std=c++17', executable_path, code_path]
     elif language == Language.c:
         compile_args = ['gcc', '-O2', '-o', executable_path, code_path]
     elif language == Language.ocaml:
