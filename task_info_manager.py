@@ -12,6 +12,7 @@ import requests
 from cachetools import TTLCache, cached
 
 import constants
+from collections import defaultdict
 from common import pending_shutdown
 from task_info import TaskInfo, TestCase
 
@@ -20,7 +21,7 @@ class TaskInfoManager:
     path_dict: Dict[str, str] = {}
     lock = threading.RLock()
     get_task_info_queue = queue.Queue()
-    waiting_judge_queue: Dict[str, queue.Queue] = {}
+    waiting_judge_queue: Dict[str, queue.Queue] = defaultdict(queue.Queue)
 
     @staticmethod
     def init() -> None:
