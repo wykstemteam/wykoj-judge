@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -7,6 +8,15 @@ from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, Header
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("debug.log")
+    ]
+)
 
 import constants
 from common import pending_shutdown
@@ -60,7 +70,7 @@ def main():
     # assert cleanup_proc.returncode == 0
 
     if not os.path.exists('config.json'):
-        print('Please add a config.json file. Aborting.')
+        logging.error('Please add a config.json file. Aborting.')
         sys.exit(1)
     with open('config.json') as f:
         constants.CONFIG = json.load(f)
@@ -85,7 +95,7 @@ def main():
     uvicorn.run(app, port=8000, host='0.0.0.0')
 
     pending_shutdown.set()
-    print('Waiting for all queued submissions to finish judging')
+    logging.info('Waiting for all queued submissions to finish judging')
     for thread in threads:
         thread.join()
 

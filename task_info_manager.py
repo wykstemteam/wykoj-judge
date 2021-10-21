@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import queue
 import secrets
@@ -124,7 +125,9 @@ class TaskInfoManager:
     @staticmethod
     def pre_update_task_info(task_id: str) -> None:
         with TaskInfoManager.lock:
+            logging.info(f"Pushing task_id {task_id} to get_task_info_queue")
             TaskInfoManager.get_task_info_queue.put(task_id)
+            logging.info(f"Creating queue.Queue() for waiting_judge_queue[{task_id}]")
             TaskInfoManager.waiting_judge_queue[task_id] = queue.Queue()
 
     @staticmethod
@@ -135,11 +138,28 @@ class TaskInfoManager:
         with TaskInfoManager.lock:
             task_info_path = TaskInfoManager.path_dict[task_id]
             # Release submissions into judge queue
+            if task_id not in TaskInfoManager.waiting_judge_queue:
+                logging.warning(f"TaskInfoManager.waiting_judge_queue[{task_id!r}] does not exist")
+                return
+            logging.debug(f"Releasing {task_id} submissions into judge queue")
             while not TaskInfoManager.waiting_judge_queue[task_id].empty():
                 args = TaskInfoManager.waiting_judge_queue[task_id].get_nowait()
                 JudgeManager.judge_queue.put((*args, task_info_path))
                 TaskInfoManager.waiting_judge_queue[task_id].task_done()
             del TaskInfoManager.waiting_judge_queue[task_id]
+
+    @staticmethod
+    def update_task_info_worker() -> None:
+        while not pending_shutdown.is_set() or not TaskInfoManager.get_task_info_queue.empty():
+            try:
+                with TaskInfoManager.lock:
+                    task_id = TaskInfoManager.get_task_info_queue.get_nowait()
+            except queue.Empty:
+                time.sleep(1)
+                continue
+
+            TaskInfoManager.update_task_info(task_id)
+            TaskInfoManager.post_update_task_info(task_id)
 
     @staticmethod
     def get_task_info(task_info_path: str) -> Dict[str, Any]:
