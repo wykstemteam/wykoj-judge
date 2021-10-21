@@ -1,8 +1,8 @@
+import logging
+import requests
 import subprocess
 import traceback
 from typing import List, Union
-
-import requests
 
 import compilation
 import constants
@@ -13,7 +13,7 @@ from verdict import Verdict
 
 
 def judge(
-    code: str, submission_id: str, language: Language, task_info_path: str, thread_id: int
+        code: str, submission_id: str, language: Language, task_info_path: str, thread_id: int
 ) -> None:
     verdict = _judge_impl(code, language, task_info_path, thread_id)
 
@@ -48,6 +48,7 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
                 thread_id: int) -> Union[Verdict, List[TestCaseResult]]:
     base_name = f'code{thread_id}'
     metadata_path = f'run/metadata{thread_id}.txt'
+    logging.info(f'thread {thread_id}: compiling')
     try:
         run_args = compilation.prepare(language, thread_id, base_name, code)
     except compilation.CompilationError:
@@ -62,6 +63,7 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
         )
         return Verdict.SE
 
+    logging.info(f'thread {thread_id}: running')
     test_case_results = []
     test_case_outputs = []
     for test_case in TaskInfoManager.iter_test_cases(task_info_path):
@@ -101,13 +103,14 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
                            memory_used=int(metadata['max-rss']) / 1024))
         test_case_outputs.append(run_proc.stdout)
 
+    logging.info(f'thread {thread_id}: judging')
     grader_run_args = []
     if task_info.grader:
         grader_base_name = f'grader{thread_id}'
         grader_run_args = compilation.prepare(task_info.grader_language, thread_id, grader_base_name,
                                               task_info.grader_source_code)
     for test_case, test_case_result, output in zip(
-        TaskInfoManager.iter_test_cases(task_info_path), test_case_results, test_case_outputs
+            TaskInfoManager.iter_test_cases(task_info_path), test_case_results, test_case_outputs
     ):
         if test_case_result.verdict != Verdict.AC:  # RE, TLE etc.
             continue
@@ -120,8 +123,8 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
             input_lines_count = test_case.input.count('\n')
             output_lines_count = output.count('\n')
             grader_input = (
-                f'{input_lines_count}\n' + f'{test_case.input}'  # including trailing \n
-                f'{output_lines_count}\n' + f'{output}'
+                    f'{input_lines_count}\n' + f'{test_case.input}'  # including trailing \n
+                                               f'{output_lines_count}\n' + f'{output}'
             )
             grader_proc = compilation.run(grader_run_args, thread_id, grader_input)
             if grader_proc.returncode != 0:
@@ -156,4 +159,5 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
                 test_case_result.verdict = Verdict.WA
                 test_case_result.score = 0.0
 
+    logging.info(f'thread {thread_id}: completed')
     return test_case_results

@@ -78,7 +78,7 @@ def main():
         threads.append(thread)
 
     # One thread for updating task info
-    thread = threading.Thread(target=TaskInfoManager.update_task_info_worker)
+    thread = threading.Thread()
     thread.start()
     threads.append(thread)
 

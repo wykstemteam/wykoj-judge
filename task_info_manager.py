@@ -17,6 +17,7 @@ from common import pending_shutdown
 from task_info import TaskInfo, TestCase
 
 
+
 class TaskInfoManager:
     path_dict: Dict[str, str] = {}
     lock = threading.RLock()
@@ -139,19 +140,6 @@ class TaskInfoManager:
                 JudgeManager.judge_queue.put((*args, task_info_path))
                 TaskInfoManager.waiting_judge_queue[task_id].task_done()
             del TaskInfoManager.waiting_judge_queue[task_id]
-
-    @staticmethod
-    def update_task_info_worker() -> None:
-        while not pending_shutdown.is_set() or not TaskInfoManager.get_task_info_queue.empty():
-            try:
-                with TaskInfoManager.lock:
-                    task_id = TaskInfoManager.get_task_info_queue.get_nowait()
-            except queue.Empty:
-                time.sleep(1)
-                continue
-
-            TaskInfoManager.update_task_info(task_id)
-            TaskInfoManager.post_update_task_info(task_id)
 
     @staticmethod
     def get_task_info(task_info_path: str) -> Dict[str, Any]:
