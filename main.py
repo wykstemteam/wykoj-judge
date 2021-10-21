@@ -49,8 +49,8 @@ def judge_solution(submission: Submission, submission_id: int, task_id: str, lan
 
     if not TaskInfoManager.is_up_to_date(task_id):
         # Task info needs to be updated
+        TaskInfoManager.pre_update_task_info(task_id)
         with TaskInfoManager.lock:
-            TaskInfoManager.pre_update_task_info(task_id)
             TaskInfoManager.waiting_judge_queue[task_id].put(
                 (submission.source_code, submission_id, language)
             )
@@ -88,7 +88,7 @@ def main():
         threads.append(thread)
 
     # One thread for updating task info
-    thread = threading.Thread()
+    thread = threading.Thread(target=TaskInfoManager.update_task_info_worker)
     thread.start()
     threads.append(thread)
 
