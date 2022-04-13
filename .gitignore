@@ -7,3 +7,4 @@ run/
 nohup.out
 config.json
 task_info_path.json
+*.log
