@@ -164,9 +164,18 @@ class TaskInfoManager:
     @staticmethod
     def get_task_info(task_info_path: str) -> Dict[str, Any]:
         # Load task info (metadata) from file
-        # with open(task_info_path, encoding='utf-8') as f:
         with open(task_info_path, 'rb') as f:
-            metadata = dict(ijson.kvitems(f, 'metadata', use_float=True))
+            metadata = {}
+            key = None
+            for prefix, event, value in ijson.parse(f, use_float=True):
+                if not prefix.startswith("metadata"):
+                    continue
+                if event == "end_map":
+                    break
+                elif event == "map_key":
+                    key = value
+                elif event != "start_map":
+                    metadata[key] = value
 
         return TaskInfo(
             float(metadata['time_limit']), int(metadata['memory_limit']), metadata['grader'],
@@ -175,6 +184,6 @@ class TaskInfoManager:
 
     @staticmethod
     def iter_test_cases(task_info_path: str) -> Iterable[TestCase]:
-        with open(task_info_path, encoding='utf-8') as f:
+        with open(task_info_path, 'rb') as f:
             for test_case in ijson.items(f, 'test_cases.item'):
                 yield TestCase(**test_case)
