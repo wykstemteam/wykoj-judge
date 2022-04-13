@@ -32,15 +32,20 @@ def judge(
                                      json={'verdict': verdict},
                                      headers={'X-Auth-Token': constants.CONFIG['secret_key']})
         else:
-            response = requests.post(report_url,
-                                     json={'test_case_results': [{'subtask': v.subtask,
-                                                                  'test_case': v.test_case,
-                                                                  'verdict': v.verdict,
-                                                                  'score': v.score,
-                                                                  'time_used': v.time_used,
-                                                                  'memory_used': v.memory_used}
-                                                                 for v in verdict]},
-                                     headers={'X-Auth-Token': constants.CONFIG['secret_key']})
+            while True:
+                try:
+                    response = requests.post(report_url,
+                                             json={'test_case_results': [{'subtask': v.subtask,
+                                                                          'test_case': v.test_case,
+                                                                          'verdict': v.verdict,
+                                                                          'score': v.score,
+                                                                          'time_used': v.time_used,
+                                                                          'memory_used': v.memory_used}
+                                                                         for v in verdict]},
+                                             headers={'X-Auth-Token': constants.CONFIG['secret_key']})
+                    break
+                except requests.exceptions.ConnectionError:
+                    pass
         response.raise_for_status()
 
 

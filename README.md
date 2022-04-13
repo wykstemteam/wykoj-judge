@@ -9,10 +9,10 @@ WYKOJ Judging Backend. Written in Python.
 * Install [isolate](https://github.com/ioi/isolate)
 * Clone this repository
 * Install pip requirements
-* If building on WSL, v2 required T__T
+* If building on WSL, v2 required
 
 ```commandline
-sudo apt-get install libcap-dev make gcc
+sudo apt-get install libcap-dev make gcc python3 python3-pip ocaml
 cd ~/Downloads
 git clone https://github.com/ioi/isolate.git
 cd isolate

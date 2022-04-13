@@ -164,7 +164,8 @@ class TaskInfoManager:
     @staticmethod
     def get_task_info(task_info_path: str) -> Dict[str, Any]:
         # Load task info (metadata) from file
-        with open(task_info_path, encoding='utf-8') as f:
+        # with open(task_info_path, encoding='utf-8') as f:
+        with open(task_info_path, 'rb') as f:
             metadata = dict(ijson.kvitems(f, 'metadata', use_float=True))
 
         return TaskInfo(

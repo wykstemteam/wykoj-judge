@@ -33,7 +33,7 @@ def prepare(language: Language, box_id: int, base_name: str, code: str) -> List[
     elif language == Language.pas:
         compile_args = ['fpc', '-O2', '-Sg', '-v0', '-XS', code_path, '-o' + executable_path]
     elif language == Language.py:
-        run_args = ['/usr/bin/python3.9', code_filename]
+        run_args = ['/usr/bin/python3', code_filename]
 
     if compile_args:
         compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE)
@@ -55,14 +55,14 @@ def run(run_args: List[str], box_id: int, input_: str,
         print(' '.join(['isolate', '-b', str(box_id)] +
                        (['-M', metadata_path] if metadata_path else []) +
                        (['-t', str(time_limit)] if time_limit else []) +
-                       (['-w', str(time_limit + 1)] if time_limit else []) +  # wall time
+                       (['-w', str(20)] if time_limit else []) +  # wall time
                        (['-m', str(memory_limit * 1024)] if memory_limit else []) +  # in kilobytes
                        ['--silent', '--run', '--'] + run_args))
     return subprocess.run(['isolate'] +
                           (['-M', metadata_path] if metadata_path else []) +
                           (['-b', str(box_id)] if box_id else []) +
                           (['-t', str(time_limit)] if time_limit else []) +
-                          (['-w', str(time_limit + 1)] if time_limit else []) +  # wall time
+                          (['-w', str(20)] if time_limit else []) +  # wall time
                           (['-m', str(memory_limit * 1024)] if memory_limit else []) +  # in kilobytes
                           ['--stderr-to-stdout', '--silent', '--run', '--'] + run_args,
                           input=input_,
