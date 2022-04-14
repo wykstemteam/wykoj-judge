@@ -1,3 +1,4 @@
+import time
 import logging
 import requests
 import subprocess
@@ -54,6 +55,7 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
     base_name = f'code{thread_id}'
     metadata_path = f'run/metadata{thread_id}.txt'
     logging.info(f'thread {thread_id}: compiling')
+
     try:
         run_args = compilation.prepare(language, thread_id, base_name, code)
     except compilation.CompilationError:
@@ -62,15 +64,26 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
     try:
         task_info = TaskInfoManager.get_task_info(task_info_path)
     except Exception as e:
-        print(
+        logging.error(
             f'Error in retrieving task info:\n' +
-            ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
+            ''.join(traceback.format_exception(
+                etype=type(e), value=e, tb=e.__traceback__))
         )
         return Verdict.SE
 
-    logging.info(f'thread {thread_id}: running')
+    grader_run_args = []
+    if task_info.grader:
+        grader_base_name = f'grader{thread_id}'
+        try:
+            grader_run_args = compilation.prepare(task_info.grader_language, thread_id, grader_base_name,
+                                                  task_info.grader_source_code)
+        except compilation.CompilationError:
+            logging.error(f'thread {thread_id}: grader compilation error')
+            return Verdict.SE
+
+    logging.info(f'thread {thread_id}: running and judging')
     test_case_results = []
-    test_case_outputs = []
+    start = time.perf_counter()
     for test_case in TaskInfoManager.iter_test_cases(task_info_path):
         if not test_case.input.endswith('\n'):
             test_case.input += '\n'  # ensures input has trailing \n
@@ -97,72 +110,75 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
             elif status == 'TO':
                 verdict = Verdict.TLE
             else:  # Including status == 'XX'
+                logging.error(f'thread {thread_id}: isolate funny')
                 return Verdict.SE
 
-        test_case_results.append(
-            TestCaseResult(subtask=test_case.subtask,
-                           test_case=test_case.test_case,
-                           verdict=verdict,
-                           score=0.,
-                           time_used=min(float(metadata['time']), task_info.time_limit),
-                           memory_used=int(metadata['max-rss']) / 1024))
-        test_case_outputs.append(run_proc.stdout)
+        test_case_result = TestCaseResult(
+            subtask=test_case.subtask,
+            test_case=test_case.test_case,
+            verdict=verdict,
+            score=0.,
+            time_used=min(
+                float(metadata['time']), task_info.time_limit),
+            memory_used=int(metadata['max-rss']) / 1024)
 
-    logging.info(f'thread {thread_id}: judging')
-    grader_run_args = []
-    if task_info.grader:
-        grader_base_name = f'grader{thread_id}'
-        grader_run_args = compilation.prepare(task_info.grader_language, thread_id, grader_base_name,
-                                              task_info.grader_source_code)
-    for test_case, test_case_result, output in zip(
-            TaskInfoManager.iter_test_cases(task_info_path), test_case_results, test_case_outputs
-    ):
-        if test_case_result.verdict != Verdict.AC:  # RE, TLE etc.
-            continue
+        if test_case_result.verdict == Verdict.AC: # if no tle and stuff
+            output = run_proc.stdout
+            if not output.endswith('\n'):  # again ensure output has trailing \n
+                output += '\n'
+            output = ''.join(
+                [line.rstrip() + '\n' for line in output.split('\n')])
 
-        if not output.endswith('\n'):  # again ensure output has trailing \n
-            output += '\n'
-        output = ''.join([line.rstrip() + '\n' for line in output.split('\n')])
-
-        if task_info.grader:
-            input_lines_count = test_case.input.count('\n')
-            output_lines_count = output.count('\n')
-            grader_input = (
-                    f'{input_lines_count}\n' + f'{test_case.input}'  # including trailing \n
-                                               f'{output_lines_count}\n' + f'{output}'
-            )
-            grader_proc = compilation.run(grader_run_args, thread_id, grader_input)
-            if grader_proc.returncode != 0:
-                return Verdict.SE
-
-            grader_output = grader_proc.stdout.strip()
-            if grader_output == 'AC':
-                test_case_result.verdict = Verdict.AC
-                test_case_result.score = 100.0
-            elif grader_output == 'WA':
-                test_case_result.verdict = Verdict.WA
-                test_case_result.score = 0.0
-            else:  # Assume is PS
-                try:
-                    verdict, score = grader_output.split(maxsplit=1)
-                    assert verdict == "PS"
-                    test_case_result.verdict = Verdict.PS
-                    test_case_result.score = float(score)
-                    assert 0 <= test_case_result.score <= 100
-                except (ValueError, AssertionError):
+            if task_info.grader:
+                input_lines_count = test_case.input.count('\n')
+                output_lines_count = output.count('\n')
+                grader_input = (
+                    f'{input_lines_count}\n' +
+                    f'{test_case.input}'  # including trailing \n
+                    f'{output_lines_count}\n' + \
+                    f'{output}'
+                )
+                grader_proc = compilation.run(
+                    grader_run_args, thread_id, grader_input)
+                if grader_proc.returncode != 0:
+                    logging.error(f'thread {thread_id}: grader exited with non-zero code')
                     return Verdict.SE
 
-        else:
-            target_output = test_case.output
-            if not target_output.endswith('\n'):  # again ensure output has trailing \n
-                target_output += '\n'
-            target_output = ''.join([line.rstrip() + '\n' for line in target_output.split('\n')])
-            if output == target_output:
-                test_case_result.verdict = Verdict.AC
-                test_case_result.score = 100.0
+                grader_output = grader_proc.stdout.strip()
+                if grader_output == 'AC':
+                    test_case_result.verdict = Verdict.AC
+                    test_case_result.score = 100.0
+                elif grader_output == 'WA':
+                    test_case_result.verdict = Verdict.WA
+                    test_case_result.score = 0.0
+                else:  # Assume is PS
+                    try:
+                        verdict, score = grader_output.split(maxsplit=1)
+                        assert verdict == "PS"
+                        test_case_result.verdict = Verdict.PS
+                        test_case_result.score = float(score)
+                        assert 0 <= test_case_result.score <= 100
+                    except (ValueError, AssertionError):
+                        logging.error(f'thread {thread_id}: grader output error')
+                        return Verdict.SE
+
             else:
-                test_case_result.verdict = Verdict.WA
-                test_case_result.score = 0.0
+                target_output = test_case.output
+                # again ensure output has trailing \n
+                if not target_output.endswith('\n'):
+                    target_output += '\n'
+                target_output = ''.join(
+                    [line.rstrip() + '\n' for line in target_output.split('\n')])
+                if output == target_output:
+                    test_case_result.verdict = Verdict.AC
+                    test_case_result.score = 100.0
+                else:
+                    test_case_result.verdict = Verdict.WA
+                    test_case_result.score = 0.0
+        
+        test_case_results.append(test_case_result)
 
     logging.info(f'thread {thread_id}: completed')
+    end = time.perf_counter()
+    logging.info(f'thread {thread_id}: took {end - start:.4f}s to judge')
     return test_case_results
