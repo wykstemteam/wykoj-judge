@@ -1,15 +1,18 @@
-import queue
+from audioop import mul
+import logging
+import multiprocessing
 import traceback
+import queue
 
 from common import pending_shutdown
 from judge import judge
 
 
 class JudgeManager:
-    judge_queue = queue.Queue()
+    judge_queue = multiprocessing.JoinableQueue()
 
     @staticmethod
-    def judge_worker(thread_id: int) -> None:
+    def judge_worker(process_id: int) -> None:
         while not pending_shutdown.is_set() or not JudgeManager.judge_queue.empty():
             try:
                 args = JudgeManager.judge_queue.get(timeout=1)
@@ -17,7 +20,7 @@ class JudgeManager:
                 continue
 
             try:
-                judge(*args, thread_id)
+                judge(*args, process_id)
             except Exception as e:
                 print(
                     f'Error in judging submission:\n' +

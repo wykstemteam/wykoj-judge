@@ -1,5 +1,6 @@
 import json
 import logging
+import multiprocessing
 import os
 import subprocess
 import sys
@@ -65,10 +66,6 @@ def main():
     if len(sys.argv) >= 2:
         constants.DEBUG = True
 
-    # cleanup sandbox
-    # cleanup_proc = subprocess.run(['isolate', '--silent', '--cleanup'])
-    # assert cleanup_proc.returncode == 0
-
     if not os.path.exists('config.json'):
         logging.error('Please add a config.json file. Aborting.')
         sys.exit(1)
@@ -80,12 +77,13 @@ def main():
 
     TaskInfoManager.init()
 
+    processes = []
     threads = []
 
-    for i in range(constants.MAX_THREAD_NO):
-        thread = threading.Thread(target=JudgeManager.judge_worker, args=(i,))
-        thread.start()
-        threads.append(thread)
+    for i in range(constants.MAX_PROCESS_NO):
+        process = multiprocessing.Process(target=JudgeManager.judge_worker, args=(i,))
+        process.start()
+        processes.append(process)
 
     # One thread for updating task info
     thread = threading.Thread(target=TaskInfoManager.update_task_info_worker)
@@ -94,10 +92,13 @@ def main():
 
     uvicorn.run(app, port=8000, host='0.0.0.0')
 
+    # is this necessary 
     pending_shutdown.set()
     logging.info('Waiting for all queued submissions to finish judging')
     for thread in threads:
         thread.join()
+    for process in processes:
+        process.join()
 
     TaskInfoManager.shutdown()
 

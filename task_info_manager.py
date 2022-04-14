@@ -157,7 +157,6 @@ class TaskInfoManager:
             except queue.Empty:
                 time.sleep(1)
                 continue
-
             TaskInfoManager.update_task_info(task_id)
             TaskInfoManager.post_update_task_info(task_id)
 
