@@ -59,7 +59,7 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
     logging.info(f'process {process_id}: compiling')
 
     try:
-        run_args = compilation.prepare(language, process_id, base_name, code)
+        run_args = compilation.prepare(language, process_id, base_name, code, True)
     except compilation.CompilationError:
         return Verdict.CE
 
@@ -77,8 +77,13 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
     if task_info.grader:
         grader_base_name = f'grader{process_id}'
         try:
-            grader_run_args = compilation.prepare(task_info.grader_language, process_id, grader_base_name,
-                                                  task_info.grader_source_code)
+            grader_run_args = compilation.prepare(
+                task_info.grader_language,
+                process_id,
+                grader_base_name,
+                task_info.grader_source_code,
+                cleanup=False
+            )
         except compilation.CompilationError:
             logging.error(f'process {process_id}: grader compilation error')
             return Verdict.SE
@@ -123,7 +128,7 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
                 float(metadata['time']), task_info.time_limit),
             memory_used=int(metadata['max-rss']) / 1024)
 
-        if test_case_result.verdict == Verdict.AC: # if no tle and stuff
+        if verdict == Verdict.AC:  # if no tle and stuff
             output = run_proc.stdout
             if not output.endswith('\n'):  # again ensure output has trailing \n
                 output += '\n'
@@ -142,7 +147,8 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
                 grader_proc = compilation.run(
                     grader_run_args, process_id, grader_input)
                 if grader_proc.returncode != 0:
-                    logging.error(f'process {process_id}: grader exited with non-zero code')
+                    logging.error(
+                        f'process {process_id}: grader exited with non-zero code')
                     return Verdict.SE
 
                 grader_output = grader_proc.stdout.strip()
@@ -160,7 +166,8 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
                         test_case_result.score = float(score)
                         assert 0 <= test_case_result.score <= 100
                     except (ValueError, AssertionError):
-                        logging.error(f'process {process_id}: grader output error')
+                        logging.error(
+                            f'process {process_id}: grader output error')
                         return Verdict.SE
 
             else:
@@ -176,9 +183,10 @@ def _judge_impl(code: str, language: Language, task_info_path: str,
                 else:
                     test_case_result.verdict = Verdict.WA
                     test_case_result.score = 0.0
-        
+
         test_case_results.append(test_case_result)
 
     end_time = time.perf_counter()
-    logging.info(f'process {process_id}: completed in {end_time - start_time:.4f}s')
+    logging.info(
+        f'process {process_id}: completed in {end_time - start_time:.4f}s')
     return test_case_results

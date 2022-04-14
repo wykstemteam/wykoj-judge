@@ -12,10 +12,11 @@ class CompilationError(Exception):
     pass
 
 
-def prepare(language: Language, box_id: int, base_name: str, code: str) -> List[str]:
-    subprocess.run(['isolate', '-b', str(box_id), '--silent', '--cleanup'])
-    sandbox_path = subprocess.run(['isolate', '-b', str(box_id), '--init'], stdout=subprocess.PIPE,
-                                  text=True).stdout.strip() + '/box'
+def prepare(language: Language, box_id: int, base_name: str, code: str, cleanup: bool) -> List[str]:
+    if cleanup:
+        subprocess.run(['isolate', '-b', str(box_id), '--silent', '--cleanup'])
+        subprocess.run(['isolate', '-b', str(box_id), '--silent', '--init'], stdout=subprocess.PIPE)
+    sandbox_path = f'/var/local/lib/isolate/{box_id}/box'
     code_filename = f'{base_name}.{extensions.file_extensions[language]}'
     executable_path = f'run/{base_name}'
     code_path = f'run/{code_filename}'
