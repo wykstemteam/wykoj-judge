@@ -19,18 +19,26 @@ logging.basicConfig(
     ]
 )
 
-import constants
-from common import pending_shutdown
-from judge_manager import JudgeManager
-from language import Language
-from submission import Submission
-from task_info_manager import TaskInfoManager
+import judge.constants as constants
+from .common import pending_shutdown
+from .judge_manager import JudgeManager
+from .language import Language
+from .submission import Submission
+from .task_info_manager import TaskInfoManager
 
 app = FastAPI()
 
 
 @app.get('/ping')
 def ping():
+    return {'success': True}
+
+
+@app.post("/pull_test_cases")
+def update_test_cases():
+    if x_auth_token != constants.CONFIG['secret_key']:
+        return {'success': False}
+
     return {'success': True}
 
 
@@ -92,7 +100,7 @@ def main():
 
     uvicorn.run(app, port=8000, host='0.0.0.0', log_config='log_conf.yml')
 
-    # is this necessary 
+    # is this necessary
     pending_shutdown.set()
     logging.info('Waiting for all queued submissions to finish judging')
     for thread in threads:

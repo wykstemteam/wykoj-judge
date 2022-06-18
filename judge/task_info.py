@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from language import Language
+from .language import Language
 
 
 @dataclass

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from verdict import Verdict
+from .verdict import Verdict
 
 
 @dataclass

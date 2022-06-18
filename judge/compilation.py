@@ -1,11 +1,11 @@
+import logging
 import shutil
 import subprocess
-from typing import Optional, List
+from typing import List, Optional
 
-import constants
-import extensions
-import logging
-from language import Language
+import judge.constants as constants
+import judge.extensions as extensions
+from .language import Language
 
 
 class CompilationError(Exception):

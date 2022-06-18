@@ -26,5 +26,5 @@ pip3 install -r requirements.txt
 ## Run
 
 ```commandline
-python3 main.py
+python3 -m judge
 ```

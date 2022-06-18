@@ -5,12 +5,12 @@ import subprocess
 import traceback
 from typing import List, Union
 
-import compilation
-import constants
-from language import Language
-from task_info_manager import TaskInfoManager
-from test_case_result import TestCaseResult
-from verdict import Verdict
+import judge.compilation as compilation
+import judge.constants as constants
+from .language import Language
+from .task_info_manager import TaskInfoManager
+from .test_case_result import TestCaseResult
+from .verdict import Verdict
 
 
 def judge(

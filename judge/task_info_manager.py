@@ -6,17 +6,16 @@ import queue
 import secrets
 import threading
 import time
+from collections import defaultdict
 from typing import Any, Dict, Iterable, Optional
 
 import ijson
 import requests
 from cachetools import TTLCache, cached
 
-import constants
-from collections import defaultdict
-from common import pending_shutdown
-from task_info import TaskInfo, TestCase
-
+import judge.constants as constants
+from .common import pending_shutdown
+from .task_info import TaskInfo, TestCase
 
 
 class TaskInfoManager:
@@ -133,7 +132,7 @@ class TaskInfoManager:
     @staticmethod
     def post_update_task_info(task_id: str) -> None:
         # Prevent circular imports
-        from judge_manager import JudgeManager
+        from .judge_manager import JudgeManager
 
         with TaskInfoManager.lock:
             task_info_path = TaskInfoManager.path_dict[task_id]

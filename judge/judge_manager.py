@@ -4,8 +4,8 @@ import multiprocessing
 import traceback
 import queue
 
-from common import pending_shutdown
-from judge import judge
+from .common import pending_shutdown
+from .judge import judge
 
 
 class JudgeManager:

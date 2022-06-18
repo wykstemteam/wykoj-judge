@@ -1,4 +1,4 @@
-from language import Language
+from .language import Language
 
 file_extensions = {
     Language.cpp: 'cpp',
