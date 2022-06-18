@@ -2,7 +2,6 @@ import json
 import logging
 import multiprocessing
 import os
-import subprocess
 import sys
 import threading
 from typing import Optional
@@ -35,7 +34,7 @@ def ping():
 
 
 @app.post("/pull_test_cases")
-def update_test_cases():
+def update_test_cases(x_auth_token: Optional[str] = Header(None)):
     if x_auth_token != constants.CONFIG['secret_key']:
         return {'success': False}
 
