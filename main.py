@@ -90,7 +90,7 @@ def main():
     thread.start()
     threads.append(thread)
 
-    uvicorn.run(app, port=8000, host='0.0.0.0')
+    uvicorn.run(app, port=8000, host='0.0.0.0', log_config='log_conf.yml')
 
     # is this necessary 
     pending_shutdown.set()
