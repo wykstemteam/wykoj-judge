@@ -21,7 +21,13 @@ cd *whatever*
 git clone https://github.com/wykoj/wykoj-judge.git
 cd wykoj-judge
 pip3 install -r requirements.txt
+git submodule init
+git submodule update
+git submodule foreach git pull origin master
 ```
+
+Refer to [wykstemteam/wykoj](https://github.com/wykstemteam/wykoj)
+for instructions to create a GitHub repo to store test cases.
 
 ## Run
 

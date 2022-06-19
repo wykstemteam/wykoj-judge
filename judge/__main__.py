@@ -17,7 +17,6 @@ from .common import pending_shutdown, session
 from .judge_manager import JudgeManager
 from .models import JudgeRequest
 
-
 if len(sys.argv) >= 2:
     constants.DEBUG = True
 
