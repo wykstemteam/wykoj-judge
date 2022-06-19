@@ -1,11 +1,13 @@
+import logging
 import shutil
 import subprocess
-from typing import Optional, List
+from typing import List, Optional
 
-import constants
-import extensions
-import logging
-from language import Language
+import judge.extensions as extensions
+
+from .language import Language
+
+logger = logging.getLogger(__name__)
 
 
 class CompilationError(Exception):
@@ -16,6 +18,7 @@ def prepare(language: Language, box_id: int, base_name: str, code: str, cleanup:
     if cleanup:
         subprocess.run(['isolate', '-b', str(box_id), '--silent', '--cleanup'])
         subprocess.run(['isolate', '-b', str(box_id), '--silent', '--init'], stdout=subprocess.PIPE)
+
     sandbox_path = f'/var/local/lib/isolate/{box_id}/box'
     code_filename = f'{base_name}.{extensions.file_extensions[language]}'
     executable_path = f'run/{base_name}'
@@ -31,10 +34,12 @@ def prepare(language: Language, box_id: int, base_name: str, code: str, cleanup:
         compile_args = ['gcc', '-O2', '-o', executable_path, code_path]
     elif language == Language.ocaml:
         compile_args = ['ocamlopt', '-S', '-o', executable_path, code_path]
-    elif language == Language.pas:
-        compile_args = ['fpc', '-O2', '-Sg', '-v0', '-XS', code_path, '-o' + executable_path]
+    # elif language == Language.pas:
+    #     compile_args = ['fpc', '-O2', '-Sg', '-v0', '-XS', code_path, '-o' + executable_path]
     elif language == Language.py:
         run_args = ['/usr/bin/python3', code_filename]
+    else:
+        raise NotImplementedError
 
     if compile_args:
         compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE)
@@ -52,20 +57,22 @@ def run(run_args: List[str], box_id: int, input_: str,
         metadata_path: Optional[str] = None,
         time_limit: Optional[float] = None,
         memory_limit: Optional[int] = None) -> subprocess.CompletedProcess:
-    if constants.DEBUG:
-        print(' '.join(['isolate', '-b', str(box_id)] +
-                       (['-M', metadata_path] if metadata_path else []) +
-                       (['-t', str(time_limit)] if time_limit else []) +
-                       (['-w', str(20)] if time_limit else []) +  # wall time
-                       (['-m', str(memory_limit * 1024)] if memory_limit else []) +  # in kilobytes
-                       ['--silent', '--run', '--'] + run_args))
-    return subprocess.run(['isolate'] +
-                          (['-M', metadata_path] if metadata_path else []) +
-                          (['-b', str(box_id)] if box_id else []) +
-                          (['-t', str(time_limit)] if time_limit else []) +
-                          (['-w', str(20)] if time_limit else []) +  # wall time
-                          (['-m', str(memory_limit * 1024)] if memory_limit else []) +  # in kilobytes
-                          ['--stderr-to-stdout', '--silent', '--run', '--'] + run_args,
+
+    args = ['isolate']
+    if metadata_path:
+        args += ['-M', metadata_path]
+    if box_id:
+        args += ['-b', str(box_id)]
+    if time_limit:
+        args += ['-t', str(time_limit)]
+        args += ['-w', str(20)]  # wall time
+    if memory_limit:
+        args += ['-m', str(memory_limit * 1024)]  # in kB
+    args += ['--stderr-to-stdout', '--silent', '--run', '--']
+    args += run_args
+
+    logger.debug(' '.join(args))
+    return subprocess.run(args,
                           input=input_,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,

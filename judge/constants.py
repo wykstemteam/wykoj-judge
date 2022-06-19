@@ -1,5 +1,5 @@
 FRONTEND_URL = 'https://wykoj.owo.idv.hk'
-TASK_INFO_CACHE_DIR = '.task_info_cache'
-MAX_PROCESS_NO = 8
+TEST_CASES_DIR = 'test_cases/'
+MAX_PROCESS_NO = 6
 DEBUG = False
 CONFIG = {}
