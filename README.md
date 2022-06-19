@@ -23,7 +23,6 @@ cd wykoj-judge
 pip3 install -r requirements.txt
 git submodule init
 git submodule update
-git submodule foreach git pull origin master
 ```
 
 Refer to [wykstemteam/wykoj](https://github.com/wykstemteam/wykoj)
