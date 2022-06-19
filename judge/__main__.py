@@ -2,6 +2,8 @@ import json
 import logging
 import multiprocessing
 import os
+import shutil
+import subprocess
 import sys
 import threading
 from typing import Optional
@@ -19,11 +21,10 @@ logging.basicConfig(
 )
 
 import judge.constants as constants
-from .common import pending_shutdown
+
+from .common import pending_shutdown, session
 from .judge_manager import JudgeManager
-from .language import Language
-from .submission import Submission
-from .task_info_manager import TaskInfoManager
+from .models import JudgeRequest
 
 app = FastAPI()
 
@@ -33,39 +34,30 @@ def ping():
     return {'success': True}
 
 
+def update_test_cases():
+    proc = subprocess.run(
+        ['git', 'submodule', 'foreach', 'git', 'pull', 'origin', 'master'],
+        capture_output=True
+    )
+    logging.info("[GitHub] Updated test cases\n" + proc.stdout.decode() + proc.stderr.decode())
+
+
 @app.post("/pull_test_cases")
-def update_test_cases(x_auth_token: Optional[str] = Header(None)):
+def pull_test_cases(x_auth_token: Optional[str] = Header(None)):
     if x_auth_token != constants.CONFIG['secret_key']:
         return {'success': False}
 
+    thread = threading.Thread(target=update_test_cases)
+    thread.start()
     return {'success': True}
 
 
 @app.post('/judge')
-def judge_solution(submission: Submission, submission_id: int, task_id: str, language: Language,
-                   x_auth_token: Optional[str] = Header(None)):
+def judge_solution(judge_request: JudgeRequest, x_auth_token: Optional[str] = Header(None)):
     if x_auth_token != constants.CONFIG['secret_key']:
         return {'success': False}
 
-    with TaskInfoManager.lock:
-        if task_id in TaskInfoManager.waiting_judge_queue:
-            # Task info is being updated
-            TaskInfoManager.waiting_judge_queue[task_id].put(
-                (submission.source_code, submission_id, language)
-            )
-            return {'success': True}
-
-    if not TaskInfoManager.is_up_to_date(task_id):
-        # Task info needs to be updated
-        TaskInfoManager.pre_update_task_info(task_id)
-        with TaskInfoManager.lock:
-            TaskInfoManager.waiting_judge_queue[task_id].put(
-                (submission.source_code, submission_id, language)
-            )
-        return {'success': True}
-
-    task_info_path = TaskInfoManager.get_current_task_info_path(task_id)
-    JudgeManager.judge_queue.put((submission.source_code, submission_id, language, task_info_path))
+    JudgeManager.judge_queue.put(judge_request)
     return {'success': True}
 
 
@@ -73,41 +65,31 @@ def main():
     if len(sys.argv) >= 2:
         constants.DEBUG = True
 
-    if not os.path.exists('config.json'):
-        logging.error('Please add a config.json file. Aborting.')
-        sys.exit(1)
     with open('config.json') as f:
         constants.CONFIG = json.load(f)
+
+    session.headers['X-Auth-Token'] = constants.CONFIG['secret_key']
 
     if not os.path.exists('run'):
         os.mkdir('run')
 
-    TaskInfoManager.init()
+    thread = threading.Thread(target=update_test_cases)
+    thread.start()
 
     processes = []
-    threads = []
-
     for i in range(constants.MAX_PROCESS_NO):
         process = multiprocessing.Process(target=JudgeManager.judge_worker, args=(i,))
         process.start()
         processes.append(process)
 
-    # One thread for updating task info
-    thread = threading.Thread(target=TaskInfoManager.update_task_info_worker)
-    thread.start()
-    threads.append(thread)
-
     uvicorn.run(app, port=8000, host='0.0.0.0', log_config='log_conf.yml')
 
-    # is this necessary
     pending_shutdown.set()
     logging.info('Waiting for all queued submissions to finish judging')
-    for thread in threads:
-        thread.join()
     for process in processes:
         process.join()
 
-    TaskInfoManager.shutdown()
+    shutil.rmtree("run")
 
 
 if __name__ == '__main__':
