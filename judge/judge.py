@@ -11,6 +11,8 @@ from .models import JudgeRequest, TestCaseResult
 from .test_case_manager import TestCaseManager
 from .verdict import Verdict
 
+logger = logging.getLogger(__name__)
+
 
 def judge(judge_request: JudgeRequest, process_id: int) -> None:
     verdict = _judge_impl(judge_request, process_id)
@@ -22,9 +24,8 @@ def judge(judge_request: JudgeRequest, process_id: int) -> None:
     if cleanup_proc.returncode != 0:
         verdict = Verdict.SE
 
-    if constants.DEBUG:
-        print(verdict)
-    else:
+    logger.debug(verdict)
+    if not constants.DEBUG:
         submission_id = judge_request.submission.id
         report_url = f'{constants.FRONTEND_URL}/submission/{submission_id}/report'
         if type(verdict) is Verdict:
@@ -45,7 +46,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
 
     base_name = f'code{process_id}'
     metadata_path = f'run/metadata{process_id}.txt'
-    logging.info(f'process {process_id}: compiling')
+    logger.info(f'process {process_id}: compiling')
 
     try:
         run_args = compilation.prepare(
@@ -70,10 +71,10 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                 cleanup=False
             )
         except compilation.CompilationError:
-            logging.error(f'process {process_id}: grader compilation error')
+            logger.error(f'process {process_id}: grader compilation error')
             return Verdict.SE
 
-    logging.info(f'process {process_id}: running and judging')
+    logger.info(f'process {process_id}: running and judging')
     test_case_results = []
     for test_case in TestCaseManager.iter_test_cases(task_info):
         if not test_case.input.endswith('\n'):
@@ -101,7 +102,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
             elif status == 'TO':
                 verdict = Verdict.TLE
             else:  # Including status == 'XX'
-                logging.error(f'process {process_id}: isolate funny')
+                logger.error(f'process {process_id}: isolate funny')
                 return Verdict.SE
 
         test_case_result = TestCaseResult(
@@ -130,7 +131,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                 )
                 grader_proc = compilation.run(grader_run_args, process_id, grader_input)
                 if grader_proc.returncode != 0:
-                    logging.error(f'process {process_id}: grader exited with non-zero code')
+                    logger.error(f'process {process_id}: grader exited with non-zero code')
                     return Verdict.SE
 
                 grader_output = grader_proc.stdout.strip()
@@ -148,7 +149,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                         test_case_result.score = float(score)
                         assert 0 <= test_case_result.score <= 100
                     except (ValueError, AssertionError):
-                        logging.error(f'process {process_id}: grader output error')
+                        logger.error(f'process {process_id}: grader output error')
                         return Verdict.SE
             else:
                 target_output = test_case.output
@@ -166,5 +167,5 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
         test_case_results.append(test_case_result)
 
     end_time = time.perf_counter()
-    logging.info(f'process {process_id}: completed in {end_time - start_time:.4f}s')
+    logger.info(f'process {process_id}: completed in {end_time - start_time:.4f}s')
     return test_case_results

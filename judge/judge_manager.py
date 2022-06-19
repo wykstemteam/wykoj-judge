@@ -1,9 +1,12 @@
+import logging
 import multiprocessing
 import queue
 import traceback
 
 from .common import pending_shutdown
 from .judge import judge
+
+logger = logging.getLogger(__name__)
 
 
 class JudgeManager:
@@ -20,7 +23,7 @@ class JudgeManager:
             try:
                 judge(judge_request, process_id)
             except Exception as e:
-                print(
+                logger.error(
                     f'Error in judging submission:\n' +
                     ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
                 )

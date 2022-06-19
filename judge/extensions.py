@@ -5,5 +5,5 @@ file_extensions = {
     Language.c: 'c',
     Language.py: 'py',
     Language.ocaml: 'ml',
-    Language.pas: 'pas',
+    # Language.pas: 'pas',
 }

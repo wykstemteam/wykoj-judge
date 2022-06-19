@@ -11,20 +11,26 @@ from typing import Optional
 import uvicorn
 from fastapi import FastAPI, Header
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("debug.log")
-    ]
-)
-
 import judge.constants as constants
 
 from .common import pending_shutdown, session
 from .judge_manager import JudgeManager
 from .models import JudgeRequest
+
+
+if len(sys.argv) >= 2:
+    constants.DEBUG = True
+
+logging.basicConfig(
+    level=logging.DEBUG if constants.DEBUG else logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("debug.log")
+    ],
+    force=True
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -39,7 +45,7 @@ def update_test_cases():
         ['git', 'submodule', 'foreach', 'git', 'pull', 'origin', 'master'],
         capture_output=True
     )
-    logging.info("[GitHub] Updated test cases\n" + proc.stdout.decode() + proc.stderr.decode())
+    logger.info("[GitHub] Updated test cases\n" + proc.stdout.decode() + proc.stderr.decode())
 
 
 @app.post("/pull_test_cases")
@@ -62,9 +68,6 @@ def judge_solution(judge_request: JudgeRequest, x_auth_token: Optional[str] = He
 
 
 def main():
-    if len(sys.argv) >= 2:
-        constants.DEBUG = True
-
     with open('config.json') as f:
         constants.CONFIG = json.load(f)
 
@@ -85,7 +88,7 @@ def main():
     uvicorn.run(app, port=8000, host='0.0.0.0', log_config='log_conf.yml')
 
     pending_shutdown.set()
-    logging.info('Waiting for all queued submissions to finish judging')
+    logger.info('Waiting for all queued submissions to finish judging')
     for process in processes:
         process.join()
 
