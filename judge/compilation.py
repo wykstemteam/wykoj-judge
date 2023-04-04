@@ -31,7 +31,7 @@ def prepare(language: Language, box_id: int, base_name: str, code: str, cleanup:
     if language == Language.cpp:
         compile_args = ['g++', '-O2', '-o', executable_path, code_path, '--std=c++17' ]
     elif language == Language.c:
-        compile_args = ['gcc', '-O2', '-o', executable_path, code_path]
+        compile_args = ['gcc', '-O2', '-o', executable_path, code_path, '-lm']
     elif language == Language.ocaml:
         compile_args = ['ocamlopt', '-S', '-o', executable_path, code_path]
     # elif language == Language.pas:

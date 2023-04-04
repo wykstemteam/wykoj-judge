@@ -84,7 +84,7 @@ def main():
         process.start()
         processes.append(process)
 
-    uvicorn.run(app, port=8000, host='0.0.0.0', log_config='log_conf.yml')
+    uvicorn.run(app, port=constants.PORT, host='0.0.0.0', log_config='log_conf.yml')
 
     pending_shutdown.set()
     logger.info('Waiting for all queued submissions to finish judging')
