@@ -25,6 +25,8 @@ git submodule init
 git submodule update
 ```
 
+Note to self: sometimes if WSL cannot export port 8000 to windows, just restart entire machine.
+
 Refer to [wykstemteam/wykoj](https://github.com/wykstemteam/wykoj)
 for instructions to create a GitHub repo to store test cases.
 
