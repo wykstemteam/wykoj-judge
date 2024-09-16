@@ -82,7 +82,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
             test_case_result = TestCaseResult(
                 subtask=test_case.subtask,
                 test_case=test_case.test_case,
-                verdict=Verdict.CE, # TODO: add a new verdict for skipped subtasks
+                verdict=Verdict.SK,
                 score=0.0,
                 time_used=0.0,
                 memory_used=0.0)
