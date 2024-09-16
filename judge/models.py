@@ -13,6 +13,7 @@ class Submission(BaseModel):
     id: int
     language: Language
     source_code: str
+    in_contest: bool
 
 
 class TaskInfo(BaseModel):

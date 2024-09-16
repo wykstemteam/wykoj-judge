@@ -76,7 +76,19 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
 
     logger.info(f'process {process_id}: running and judging')
     test_case_results = []
+    skipped_subtasks = set()
     for test_case in TestCaseManager.iter_test_cases(task_info):
+        if submission.in_contest and test_case.subtask in skipped_subtasks:
+            test_case_result = TestCaseResult(
+                subtask=test_case.subtask,
+                test_case=test_case.test_case,
+                verdict=Verdict.CE, # TODO: add a new verdict for skipped subtasks
+                score=0.0,
+                time_used=0.0,
+                memory_used=0.0)
+            test_case_results.append(test_case_result)
+            continue
+        
         if not test_case.input.endswith('\n'):
             test_case.input += '\n'  # ensures input has trailing \n
         run_proc = compilation.run(run_args,
@@ -163,6 +175,9 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                 else:
                     test_case_result.verdict = Verdict.WA
                     test_case_result.score = 0.0
+                    
+        if submission.in_contest and test_case_result.verdict != Verdict.AC:
+            skipped_subtasks.add(test_case.subtask)
 
         test_case_results.append(test_case_result)
 
