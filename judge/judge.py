@@ -78,7 +78,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
     test_case_results = []
     skipped_subtasks = set()
     for test_case in TestCaseManager.iter_test_cases(task_info):
-        if submission.in_contest and test_case.subtask in skipped_subtasks:
+        if submission.in_ongoing_contest and test_case.subtask in skipped_subtasks:
             test_case_result = TestCaseResult(
                 subtask=test_case.subtask,
                 test_case=test_case.test_case,
@@ -176,7 +176,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                     test_case_result.verdict = Verdict.WA
                     test_case_result.score = 0.0
                     
-        if submission.in_contest and test_case_result.verdict != Verdict.AC:
+        if submission.in_ongoing_contest and test_case_result.verdict != Verdict.AC:
             skipped_subtasks.add(test_case.subtask)
 
         test_case_results.append(test_case_result)
