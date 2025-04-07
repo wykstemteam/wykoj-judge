@@ -176,7 +176,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                     test_case_result.verdict = Verdict.WA
                     test_case_result.score = 0.0
                     
-        if submission.in_ongoing_contest and test_case_result.verdict != Verdict.AC:
+        if submission.in_ongoing_contest and test_case_result.score == 0.0:
             skipped_subtasks.add(test_case.subtask)
 
         test_case_results.append(test_case_result)
