@@ -12,7 +12,7 @@ WYKOJ Judging Backend. Written in Python.
 * If building on WSL, v2 required
 
 ```commandline
-sudo apt-get install libcap-dev make gcc python3 python3-pip ocaml
+sudo apt-get install libcap-dev make gcc python3 python3-pip ocaml libsystemd-dev pkg-config
 cd ~/Downloads
 git clone https://github.com/ioi/isolate.git
 cd isolate
