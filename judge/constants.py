@@ -1,7 +1,7 @@
-FRONTEND_URL = 'https://wykoj.jonowo.dev'
+FRONTEND_URL = 'http://localhost:3000'
 TEST_CASES_DIR = 'test_cases/'
 MAX_PROCESS_NO = 4
 DEBUG = False
 CONFIG = {}
-PORT = 8000
+PORT = 8080
 
