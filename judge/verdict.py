@@ -9,3 +9,4 @@ class Verdict(str, Enum):
     TLE = 'tle'
     SE = 'se'
     PS = 'ps'
+    SK = 'sk'
