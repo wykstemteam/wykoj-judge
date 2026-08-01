@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List, Dict
 
 from pydantic import BaseModel
 
@@ -22,6 +22,7 @@ class TaskInfo(BaseModel):
     grader: bool  # if uses grader
     grader_source_code: Optional[str] = None
     grader_language: Optional[Language] = None
+    dependencies: Dict[str, List[str]] = None
 
 
 class JudgeRequest(BaseModel):
@@ -38,6 +39,7 @@ class TestCase:
     test_case: int
     input: str
     output: Optional[str] = None  # None if have grader
+    skip: bool = False  # True if subtask was skipped due to a failed dependency
 
 
 @dataclass
