@@ -17,7 +17,7 @@ setup below.
 ```json
 {
     "TEST_CASES_GITHUB": "https://github.com/wykstemteam/wykoj-test-cases",
-    "JUDGE_HOST": "http://localhost:8080",
+    "JUDGE_HOST": "http://wykoj-judge:8080",
     "SECRET_KEY": "...",
     "DB_URI": "...",
     "LICHESS_TOKEN": "..."
@@ -53,9 +53,11 @@ restart entire machine.
 
 ## Build & run with Docker (macOS / other platforms)
 
-```commandline
+```bash
 docker build -t wykoj-judge .
+docker network create wykoj-net
 docker run -d --privileged -p 8080:8080 \
+  --network wykoj-net \
   -v "$(pwd)/config.json:/app/config.json:ro" \
   -v "$(pwd)/test_cases:/app/test_cases" \
   --name wykoj-judge wykoj-judge
