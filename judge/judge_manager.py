@@ -10,13 +10,18 @@ logger = logging.getLogger(__name__)
 
 
 class JudgeManager:
-    judge_queue = multiprocessing.JoinableQueue()
+    # Created once in __main__.main() and passed explicitly to worker
+    # processes. It must NOT be created here as a class attribute:
+    # on platforms using the "spawn" start method (default on macOS),
+    # each worker process re-imports this module, which would recreate
+    # a brand-new, unconnected queue instead of sharing the parent's.
+    judge_queue: multiprocessing.JoinableQueue = None
 
     @staticmethod
-    def judge_worker(process_id: int) -> None:
-        while not pending_shutdown.is_set() or not JudgeManager.judge_queue.empty():
+    def judge_worker(process_id: int, judge_queue: multiprocessing.JoinableQueue) -> None:
+        while not pending_shutdown.is_set() or not judge_queue.empty():
             try:
-                judge_request = JudgeManager.judge_queue.get(timeout=1)
+                judge_request = judge_queue.get(timeout=1)
             except queue.Empty:
                 continue
 
@@ -25,6 +30,6 @@ class JudgeManager:
             except Exception as e:
                 logger.error(
                     f'Error in judging submission:\n' +
-                    ''.join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
+                    ''.join(traceback.format_exception(type(e), e, e.__traceback__))
                 )
-            JudgeManager.judge_queue.task_done()
+            judge_queue.task_done()

@@ -49,7 +49,7 @@ def update_test_cases():
 
 @app.post("/pull_test_cases")
 def pull_test_cases(x_auth_token: Optional[str] = Header(None)):
-    if x_auth_token != constants.CONFIG['secret_key']:
+    if x_auth_token != constants.CONFIG['SECRET_KEY']:
         return {'success': False}
 
     thread = threading.Thread(target=update_test_cases)
@@ -59,7 +59,7 @@ def pull_test_cases(x_auth_token: Optional[str] = Header(None)):
 
 @app.post('/judge')
 def judge_solution(judge_request: JudgeRequest, x_auth_token: Optional[str] = Header(None)):
-    if x_auth_token != constants.CONFIG['secret_key']:
+    if x_auth_token != constants.CONFIG['SECRET_KEY']:
         return {'success': False}
 
     JudgeManager.judge_queue.put(judge_request)
@@ -70,7 +70,7 @@ def main():
     with open('config.json') as f:
         constants.CONFIG = json.load(f)
 
-    session.headers['X-Auth-Token'] = constants.CONFIG['secret_key']
+    session.headers['X-Auth-Token'] = constants.CONFIG['SECRET_KEY']
 
     if not os.path.exists('run'):
         os.mkdir('run')
@@ -78,9 +78,17 @@ def main():
     thread = threading.Thread(target=update_test_cases)
     thread.start()
 
+    # Created here (not as a JudgeManager class attribute) and passed
+    # explicitly to each worker process so it works with both the
+    # "fork" (Linux) and "spawn" (macOS default) start methods.
+    JudgeManager.judge_queue = multiprocessing.JoinableQueue()
+
     processes = []
     for i in range(constants.MAX_PROCESS_NO):
-        process = multiprocessing.Process(target=JudgeManager.judge_worker, args=(i,))
+        process = multiprocessing.Process(
+            target=JudgeManager.judge_worker,
+            args=(i, JudgeManager.judge_queue)
+        )
         process.start()
         processes.append(process)
 
