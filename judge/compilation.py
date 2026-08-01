@@ -23,7 +23,7 @@ def prepare(language: Language, box_id: int, base_name: str, code: str, cleanup:
     code_filename = f'{base_name}.{extensions.file_extensions[language]}'
     executable_path = f'run/{base_name}'
     code_path = f'run/{code_filename}'
-    with open(code_path, 'w') as f:
+    with open(code_path, 'w', encoding='utf-8') as f:
         f.write(code)
 
     compile_args = None
@@ -42,7 +42,8 @@ def prepare(language: Language, box_id: int, base_name: str, code: str, cleanup:
         raise NotImplementedError
 
     if compile_args:
-        compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE)
+        compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE,
+                                      encoding='utf-8', errors='replace')
         if compile_proc.returncode != 0:
             raise CompilationError
         shutil.copy(executable_path, sandbox_path)  # copies executable to sandbox
@@ -76,4 +77,6 @@ def run(run_args: List[str], box_id: int, input_: str,
                           input=input_,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
-                          text=True)
+                          text=True,
+                          encoding='utf-8',
+                          errors='replace')
