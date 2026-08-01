@@ -44,7 +44,11 @@ def update_test_cases():
         ['git', 'submodule', 'foreach', 'git', 'pull', 'origin', 'master'],
         capture_output=True
     )
-    logger.info("[GitHub] Updated test cases\n" + proc.stdout.decode() + proc.stderr.decode())
+    output = proc.stdout.decode() + proc.stderr.decode()
+    if proc.returncode != 0:
+        logger.error(f"[GitHub] Failed to update test cases\n{output}")
+    else:
+        logger.info(f"[GitHub] Updated test cases\n{output}")
 
 
 @app.post("/pull_test_cases")

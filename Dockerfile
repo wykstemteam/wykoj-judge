@@ -19,6 +19,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
+# Since /app is typically bind-mounted from the host at runtime (owned
+# by the host user, not the container's root), git refuses to operate
+# on it ("detected dubious ownership") unless explicitly trusted.
+RUN git config --global --add safe.directory /app \
+    && git config --global --add safe.directory /app/test_cases
+
 COPY . .
 
 CMD ["python3", "-m", "judge"]
