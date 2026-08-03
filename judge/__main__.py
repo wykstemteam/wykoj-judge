@@ -40,9 +40,20 @@ def ping():
 
 
 def update_test_cases():
+    env = os.environ.copy()
+    github_token = constants.CONFIG.get('GITHUB_TOKEN')
+    if github_token:
+        # Authenticates git's https://github.com/... requests with this
+        # token, scoped only to this subprocess call (never written to
+        # disk, e.g. no ~/.git-credentials or .git/config change).
+        env['GIT_CONFIG_COUNT'] = '1'
+        env['GIT_CONFIG_KEY_0'] = f'url.https://{github_token}@github.com/.insteadOf'
+        env['GIT_CONFIG_VALUE_0'] = 'https://github.com/'
+
     proc = subprocess.run(
         ['git', 'submodule', 'foreach', 'git', 'pull', 'origin', 'master'],
-        capture_output=True
+        capture_output=True,
+        env=env
     )
     output = proc.stdout.decode() + proc.stderr.decode()
     if proc.returncode != 0:

@@ -20,9 +20,15 @@ setup below.
     "JUDGE_HOST": "http://wykoj-judge:8080",
     "SECRET_KEY": "...",
     "DB_URI": "...",
-    "LICHESS_TOKEN": "..."
+    "LICHESS_TOKEN": "...",
+    "GITHUB_TOKEN": "..."
 }
 ```
+
+`GITHUB_TOKEN` is used to authenticate the `git pull` in `update_test_cases()`/`/pull_test_cases`.
+Use a fine-grained GitHub PAT with read-only access scoped to just that
+repo. Omit it if you already have working GitHub credentials (SSH key,
+credential helper, etc.) in whatever environment runs the judge.
 
 * Fetch the test cases submodule:
 
@@ -58,20 +64,25 @@ docker build -t wykoj-judge .
 docker network create wykoj-net
 docker run -d --privileged -p 8080:8080 \
   --network wykoj-net \
-  -v "$(pwd)/config.json:/app/config.json:ro" \
-  -v "$(pwd)/test_cases:/app/test_cases" \
+  -v "$(pwd):/app" \
   --name wykoj-judge wykoj-judge
 ```
 
 Notes:
 
 * `--privileged` is required — `isolate` needs to create cgroups.
-* `test_cases` is bind-mounted so local changes to test cases don't
-  require rebuilding the image.
-* The frontend isn't dockerized, so if it's running on your host at
-  `localhost:3000`, the judge container can't reach it via `localhost`
-  (that resolves to the container itself). Point `FRONTEND_URL` in
-  `judge/constants.py` at `http://host.docker.internal:3000` instead
-  when testing locally with Docker.
-* Rebuild the image (`docker build ...`) after pulling code changes,
-  since the app code is baked into the image rather than bind-mounted.
+* Bind-mount the whole repo (rather than just `config.json`/`test_cases`)
+  so `.git` is present for both the top-level repo and the `test_cases`
+  submodule. `update_test_cases()` and the `/pull_test_cases` webhook
+  run `git submodule foreach git pull origin master` — without `.git`
+  in the container, this fails silently (`fatal: not a git repository`)
+  and test cases never actually update, regardless of how often the
+  webhook fires.
+* This also means code changes take effect without rebuilding the
+  image — only rebuild when `requirements.txt` or the `Dockerfile`
+  itself changes.
+* If the frontend is also containerized, put it on the same
+  `--network` as the judge and have it reach the judge via the judge
+  container's `--name` (e.g. `http://wykoj-judge:8080`), not
+  `localhost`. If the frontend runs natively on the host instead,
+  point it at `http://host.docker.internal:8080`.
