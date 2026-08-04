@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Literal
+from enum import Enum
 
 from pydantic import BaseModel
 
@@ -23,10 +24,22 @@ class TaskInfo(BaseModel):
     grader_source_code: Optional[str] = None
     grader_language: Optional[Language] = None
     dependencies: Dict[str, List[str]] = None
+    
+    
+class TaskType(str, Enum):
+    BATCH = "BATCH"
+    INTERACTIVE = "INTERACTIVE"
+    
+    
+@dataclass
+class SourceFile:
+    filename: str
+    code: str
 
 
 class JudgeRequest(BaseModel):
     task_info: TaskInfo
+    task_type: TaskType
     submission: Submission
 
 

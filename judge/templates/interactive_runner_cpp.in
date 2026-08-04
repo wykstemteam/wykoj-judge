@@ -1,0 +1,53 @@
+#include <cstdio>
+#include <iostream>
+#include <string>
+#include <unistd.h>
+
+using namespace std;
+
+string grader();
+
+namespace {
+
+void strip(string& str) {
+    static const string whitespace = " \t\n\r\f\v";
+
+    size_t start = str.find_first_not_of(whitespace);
+    if (start == string::npos) {
+        str.clear();
+        return;
+    }
+
+    size_t end = str.find_last_not_of(whitespace);
+    str = str.substr(start, end - start + 1);
+}
+
+} // namespace
+
+int main() {
+    const string SECRET_KEY = %secret_key_constant%;
+
+    int stdout_copy = dup(STDOUT_FILENO);
+    if (stdout_copy == -1) {
+        return 1;
+    }
+
+    if (freopen("/dev/null", "w", stdout) == nullptr) {
+        close(stdout_copy);
+        return 1;
+    }
+
+    string verdict = grader();
+    strip(verdict);
+
+    cout.flush();
+    fflush(stdout);
+
+    dup2(stdout_copy, STDOUT_FILENO);
+    close(stdout_copy);
+
+    cout << SECRET_KEY << '\n'
+         << verdict << '\n';
+
+    return 0;
+}
