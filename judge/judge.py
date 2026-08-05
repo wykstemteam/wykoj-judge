@@ -2,13 +2,15 @@ import logging
 import subprocess
 import time
 import traceback
+import uuid
+from pathlib import Path
 from typing import List, Union
 
 import judge.compilation as compilation
 import judge.constants as constants
 
 from .common import session
-from .models import JudgeRequest, TestCaseResult
+from .models import TaskType, SourceFile, JudgeRequest, TestCaseResult
 from .test_case_manager import TestCaseManager
 from .verdict import Verdict
 
@@ -53,31 +55,59 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
 
     task_info = judge_request.task_info
     submission = judge_request.submission
+    
+    HAS_BATCH_GRADER = judge_request.task_type == TaskType.BATCH and task_info.grader
+    if judge_request.task_type == TaskType.INTERACTIVE and not task_info.grader:
+        raise ValueError("Missing grader for interactive tasks")
 
     base_name = f'code{process_id}'
     metadata_path = f'run/metadata{process_id}.txt'
+    secret_key = None
     logger.info(f'process {process_id}: compiling')
 
     try:
-        run_args = compilation.prepare(
-            submission.language,
-            process_id,
-            base_name,
-            submission.source_code,
-            cleanup=True
-        )
+        if judge_request.task_type == TaskType.BATCH:
+            run_args = compilation.prepare(
+                submission.language,
+                process_id,
+                base_name,
+                SourceFile("submission", submission.source_code),
+                cleanup=True
+            )
+        elif judge_request.task_type == TaskType.INTERACTIVE:
+            secret_key = str(uuid.uuid4())
+            template = (
+                Path("judge/templates") / "interactive_runner_cpp.in"
+            ).read_text(encoding="utf-8")
+            
+            interactive_runner_source_code = template.replace(
+                "%secret_key_constant%",
+                f'"{secret_key}"'
+            )
+            
+            run_args = compilation.prepare(
+                submission.language,
+                process_id,
+                base_name,
+                [ SourceFile("submission", submission.source_code),
+                  SourceFile("grader", task_info.grader_source_code),
+                  SourceFile("runner", interactive_runner_source_code) ],
+                cleanup=True
+            )
+        else:
+            raise NotImplementedError
     except compilation.CompilationError:
         return Verdict.CE
 
     grader_run_args = []
-    if task_info.grader:
+    if HAS_BATCH_GRADER:
         grader_base_name = f'grader{process_id}'
         try:
             grader_run_args = compilation.prepare(
                 task_info.grader_language,
                 process_id,
                 grader_base_name,
-                task_info.grader_source_code,
+                SourceFile("batch_grader", task_info.grader_source_code),
                 cleanup=False
             )
         except compilation.CompilationError:
@@ -153,20 +183,32 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                     [line.rstrip() + '\n' for line in output.split('\n')])
 
                 if task_info.grader:
-                    input_lines_count = test_case.input.count('\n')
-                    output_lines_count = output.count('\n')
-                    grader_input = (
-                        f'{input_lines_count}\n'
-                        + test_case.input  # including trailing \n
-                        + f'{output_lines_count}\n'
-                        + output
-                    )
-                    grader_proc = compilation.run(grader_run_args, process_id, grader_input)
-                    if grader_proc.returncode != 0:
-                        logger.error(f'process {process_id}: grader exited with non-zero code')
-                        return Verdict.SE
+                    if HAS_BATCH_GRADER:
+                        input_lines_count = test_case.input.count('\n')
+                        output_lines_count = output.count('\n')
+                        grader_input = (
+                            f'{input_lines_count}\n'
+                            + test_case.input  # including trailing \n
+                            + f'{output_lines_count}\n'
+                            + output
+                        )
+                        grader_proc = compilation.run(grader_run_args, process_id, grader_input)
+                        if grader_proc.returncode != 0:
+                            logger.error(f'process {process_id}: grader exited with non-zero code')
+                            return Verdict.SE
 
-                    grader_output = grader_proc.stdout.strip()
+                        grader_output = grader_proc.stdout.strip()
+                    else:
+                        raw_grader_output = output.strip().splitlines()
+
+                        if len(raw_grader_output) != 2:
+                            return Verdict.SV
+
+                        returned_secret, grader_output = raw_grader_output
+
+                        if returned_secret != secret_key:
+                            return Verdict.SV
+                    
                     if grader_output == 'AC':
                         test_case_result.verdict = Verdict.AC
                         test_case_result.score = 100.0

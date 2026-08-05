@@ -10,3 +10,4 @@ class Verdict(str, Enum):
     SE = 'se'
     PS = 'ps'
     SK = 'sk'
+    SV = 'sv'
