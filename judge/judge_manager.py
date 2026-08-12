@@ -3,7 +3,6 @@ import multiprocessing
 import queue
 import traceback
 
-from .common import pending_shutdown
 from .judge import judge
 
 logger = logging.getLogger(__name__)
@@ -18,7 +17,11 @@ class JudgeManager:
     judge_queue: multiprocessing.JoinableQueue = None
 
     @staticmethod
-    def judge_worker(process_id: int, judge_queue: multiprocessing.JoinableQueue) -> None:
+    def judge_worker(
+        process_id: int,
+        judge_queue: multiprocessing.JoinableQueue,
+        pending_shutdown: multiprocessing.Event
+    ) -> None:
         while not pending_shutdown.is_set() or not judge_queue.empty():
             try:
                 judge_request = judge_queue.get(timeout=1)

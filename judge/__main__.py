@@ -13,7 +13,7 @@ from fastapi import FastAPI, Header
 
 import judge.constants as constants
 
-from .common import pending_shutdown, session
+from .common import session
 from .judge_manager import JudgeManager
 from .models import JudgeRequest
 
@@ -93,16 +93,20 @@ def main():
     thread = threading.Thread(target=update_test_cases)
     thread.start()
 
-    # Created here (not as a JudgeManager class attribute) and passed
-    # explicitly to each worker process so it works with both the
-    # "fork" (Linux) and "spawn" (macOS default) start methods.
+    # Created here (not as a JudgeManager class attribute or a module global)
+    # and passed explicitly to each worker process so they work with both the
+    # "fork" (Linux) and "spawn" (macOS default) start methods. pending_shutdown
+    # must additionally be a multiprocessing.Event rather than a threading one:
+    # a threading.Event is copied into each child at fork, so setting it below
+    # would never be seen by the workers and the join() would hang forever.
     JudgeManager.judge_queue = multiprocessing.JoinableQueue()
+    pending_shutdown = multiprocessing.Event()
 
     processes = []
     for i in range(constants.MAX_PROCESS_NO):
         process = multiprocessing.Process(
             target=JudgeManager.judge_worker,
-            args=(i, JudgeManager.judge_queue)
+            args=(i, JudgeManager.judge_queue, pending_shutdown)
         )
         process.start()
         processes.append(process)
