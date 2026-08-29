@@ -239,7 +239,8 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                         test_case_result.score = 0.0
 
             send_value = None
-            if test_case_result.verdict != Verdict.AC and test_case.subtask in reverse_dependencies:
+            if (test_case_result.verdict != Verdict.AC and 
+                    test_case_result.verdict != Verdict.PS) and test_case.subtask in reverse_dependencies:
                 send_value = reverse_dependencies.pop(test_case.subtask)
 
             test_case_results.append(test_case_result)
