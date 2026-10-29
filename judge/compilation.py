@@ -40,13 +40,13 @@ def prepare(language: Language, box_id: int, base_name: str, source_files: Sourc
     compile_args = None
     run_args = None
     if language == Language.cpp:
-        compile_args = ['g++', '-O2', '-o', executable_path, *code_path, '--std=c++20' ]
+        compile_args = ['/usr/bin/g++', '-O2', '-o', executable_path, *code_path, '--std=c++20' ]
     elif language == Language.c:
-        compile_args = ['gcc', '-O2', '-o', executable_path, *code_path, '-lm']
+        compile_args = ['/usr/bin/gcc', '-O2', '-o', executable_path, *code_path, '-lm']
     elif language == Language.ocaml:
-        compile_args = ['ocamlopt', '-S', '-o', executable_path, *code_path]
+        compile_args = ['/usr/bin/ocamlopt', '-S', '-o', executable_path, *code_path]
     # elif language == Language.pas:
-    #     compile_args = ['fpc', '-O2', '-Sg', '-v0', '-XS', code_path, '-o' + executable_path]
+    #     compile_args = ['/usr/bin/fpc', '-O2', '-Sg', '-v0', '-XS', code_path, '-o' + executable_path]
     elif language == Language.py:
         if len(code_filename) > 1:
             raise NotImplementedError("Python does not support non-batch task")
@@ -69,6 +69,7 @@ def prepare(language: Language, box_id: int, base_name: str, source_files: Sourc
             [
                 'isolate', '-b', str(box_id),
                 '--processes',
+                '--env=PATH=/usr/bin:/bin',
                 '-w', '60',
                 '--run', '--',
                 *sandbox_compile_args
