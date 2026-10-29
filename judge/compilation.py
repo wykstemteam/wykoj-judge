@@ -55,17 +55,39 @@ def prepare(language: Language, box_id: int, base_name: str, source_files: Sourc
         raise NotImplementedError
 
     if compile_args:
-        compile_proc = subprocess.run(compile_args, text=True, stderr=subprocess.PIPE,
-                                      encoding='utf-8', errors='replace')
+        # copy source files into the sandbox to compile, 
+        # so submission code cannot read test cases
+        for path in code_path:
+            shutil.copy(path, sandbox_path)
+
+        # compile inside the sandbox
+        sandbox_compile_args = [
+            arg.replace('run/', '') for arg in compile_args
+        ]
+
+        compile_proc = subprocess.run(
+            [
+                'isolate', '-b', str(box_id),
+                '--processes',
+                '-w', '60',
+                '--run', '--',
+                *sandbox_compile_args
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=70
+        )
+
         if compile_proc.returncode != 0:
+            logger.error("Compilation failed:")
             logger.error("STDOUT:")
             logger.error(compile_proc.stdout)
             logger.error("STDERR:")
             logger.error(compile_proc.stderr)
             raise CompilationError
-        shutil.copy(executable_path, sandbox_path)  # copies executable to sandbox
-        if not run_args:
-            run_args = [base_name]  # run by directly calling the name of executable
+
+        run_args = [base_name]
     else:
         for path in code_path:
             shutil.copy(path, sandbox_path)

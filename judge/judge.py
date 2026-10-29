@@ -29,12 +29,16 @@ def judge(judge_request: JudgeRequest, process_id: int) -> None:
         )
         verdict = Verdict.SE
 
-    # cleanup sandbox
-    cleanup_proc = subprocess.run(['isolate', '-b', str(process_id), '--cleanup'],
-                                  text=True,
-                                  stdout=subprocess.PIPE)
-    if cleanup_proc.returncode != 0:
-        verdict = Verdict.SE
+    # cleanup sandboxes
+    box_ids = [process_id * 2]
+    if judge_request.task_type == TaskType.BATCH and judge_request.task_info.grader:
+        box_ids.append(process_id * 2 + 1)
+
+    for box_id in box_ids:
+        cleanup_proc = subprocess.run(['isolate', '-b', str(box_id), '--cleanup'])
+        if cleanup_proc.returncode != 0:
+            logger.error(f'process {process_id} (box {box_id}): failed to clean up sandbox')
+            verdict = Verdict.SE
 
     logger.debug(verdict)
     if not constants.DEBUG:
@@ -64,12 +68,15 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
     metadata_path = f'run/metadata{process_id}.txt'
     secret_key = None
     logger.info(f'process {process_id}: compiling')
+    
+    submission_box_id = process_id * 2
+    grader_box_id = process_id * 2 + 1
 
     try:
         if judge_request.task_type == TaskType.BATCH:
             run_args = compilation.prepare(
                 submission.language,
-                process_id,
+                submission_box_id,
                 base_name,
                 SourceFile("submission", submission.source_code),
                 cleanup=True
@@ -87,7 +94,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
             
             run_args = compilation.prepare(
                 submission.language,
-                process_id,
+                submission_box_id,
                 base_name,
                 [ SourceFile("submission", submission.source_code),
                   SourceFile("grader", task_info.grader_source_code),
@@ -105,16 +112,16 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
         try:
             grader_run_args = compilation.prepare(
                 task_info.grader_language,
-                process_id,
+                grader_box_id,
                 grader_base_name,
                 SourceFile("batch_grader", task_info.grader_source_code),
-                cleanup=False
+                cleanup=True
             )
         except compilation.CompilationError:
-            logger.error(f'process {process_id}: grader compilation error')
+            logger.error(f'process {process_id} (box {grader_box_id}): grader compilation error')
             return Verdict.SE
 
-    logger.info(f'process {process_id}: running and judging')
+    logger.info(f'process {process_id} (box {submission_box_id}): running and judging')
     test_case_results = []
     test_cases_generator = TestCaseManager.iter_test_cases(task_info)
     reverse_dependencies = {}
@@ -134,7 +141,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                 if not test_case.input.endswith('\n'):
                     test_case.input += '\n'  # ensures input has trailing \n
                 run_proc = compilation.run(run_args,
-                                        process_id,
+                                        submission_box_id,
                                         test_case.input,
                                         metadata_path,
                                         task_info.time_limit,
@@ -164,7 +171,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                 elif status == 'SK':
                     verdict = Verdict.SK
                 else:  # Including status == 'XX'
-                    logger.error(f'process {process_id}: isolate funny')
+                    logger.error(f'process {process_id} (box {submission_box_id}): isolate funny')
                     return Verdict.SE
 
             test_case_result = TestCaseResult(
@@ -192,9 +199,9 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                             + f'{output_lines_count}\n'
                             + output
                         )
-                        grader_proc = compilation.run(grader_run_args, process_id, grader_input)
+                        grader_proc = compilation.run(grader_run_args, grader_box_id, grader_input)
                         if grader_proc.returncode != 0:
-                            logger.error(f'process {process_id}: grader exited with non-zero code')
+                            logger.error(f'process {process_id} (box {grader_box_id}): grader exited with non-zero code')
                             return Verdict.SE
 
                         grader_output = grader_proc.stdout.strip()
@@ -223,7 +230,7 @@ def _judge_impl(judge_request: JudgeRequest, process_id: int) -> Union[Verdict, 
                             test_case_result.score = float(score)
                             assert 0 <= test_case_result.score <= 100
                         except (ValueError, AssertionError):
-                            logger.error(f'process {process_id}: grader output error')
+                            logger.error(f'process {process_id} (box {submission_box_id}): grader output error')
                             return Verdict.SE
                 else:
                     target_output = test_case.output
